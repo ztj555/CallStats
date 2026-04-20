@@ -2,6 +2,8 @@ package com.callstats.app
 
 import android.Manifest
 import android.app.DatePickerDialog
+import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.os.Bundle
@@ -9,11 +11,14 @@ import android.provider.CallLog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.widget.addTextChangedListener
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.callstats.app.databinding.ActivityMainBinding
@@ -28,6 +33,9 @@ class MainActivity : AppCompatActivity() {
     private var timeRangeText: String = ""
     private var isCompactMode = true // 默认显示查询界面
     private var isCallLogMode = false // 通话记录界面
+    private var isEditingNickname = false // 是否正在编辑昵称
+
+    private lateinit var prefs: SharedPreferences
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val displayDateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
@@ -42,7 +50,11 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // 初始化SharedPreferences
+        prefs = getSharedPreferences("callstats_prefs", Context.MODE_PRIVATE)
+
         initViews()
+        initNickname()
         initRecyclerView()
         // 默认显示当天
         setToday()
@@ -50,6 +62,78 @@ class MainActivity : AppCompatActivity() {
 
         // 默认显示查询界面
         switchToCompactMode()
+    }
+
+    // 初始化昵称显示
+    private fun initNickname() {
+        val savedNickname = prefs.getString("user_nickname", "") ?: ""
+        if (savedNickname.isNotEmpty()) {
+            binding.tvNickname.text = savedNickname
+            binding.tvNickname.visibility = View.VISIBLE
+            binding.etNickname.visibility = View.GONE
+        } else {
+            binding.tvNickname.visibility = View.GONE
+            binding.etNickname.visibility = View.VISIBLE
+            binding.etNickname.hint = "点击输入昵称"
+        }
+
+        // 昵称输入框 - 点击切换到编辑模式
+        binding.etNickname.setOnClickListener {
+            binding.etNickname.isEnabled = true
+            binding.etNickname.requestFocus()
+            binding.etNickname.setSelection(binding.etNickname.text?.length ?: 0)
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(binding.etNickname, InputMethodManager.SHOW_IMPLICIT)
+        }
+
+        // 昵称输入完成
+        binding.etNickname.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                saveNickname()
+                true
+            } else {
+                false
+            }
+        }
+
+        // 昵称文本点击 - 进入编辑模式
+        binding.tvNickname.setOnClickListener {
+            binding.tvNickname.visibility = View.GONE
+            binding.etNickname.visibility = View.VISIBLE
+            binding.etNickname.isEnabled = true
+            binding.etNickname.requestFocus()
+            binding.etNickname.setSelection(binding.etNickname.text?.length ?: 0)
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(binding.etNickname, InputMethodManager.SHOW_IMPLICIT)
+        }
+
+        // 输入框失去焦点时保存
+        binding.etNickname.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                saveNickname()
+            }
+        }
+    }
+
+    // 保存昵称
+    private fun saveNickname() {
+        val nickname = binding.etNickname.text?.toString()?.trim() ?: ""
+        prefs.edit().putString("user_nickname", nickname).apply()
+
+        if (nickname.isNotEmpty()) {
+            binding.tvNickname.text = nickname
+            binding.tvNickname.visibility = View.VISIBLE
+        }
+
+        // 隐藏键盘
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(binding.etNickname.windowToken, 0)
+        binding.etNickname.clearFocus()
+    }
+
+    // 获取昵称（供其他界面显示）
+    private fun getNickname(): String {
+        return prefs.getString("user_nickname", "") ?: ""
     }
 
     private fun initViews() {
