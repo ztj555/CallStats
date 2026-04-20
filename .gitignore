@@ -1,37 +1,52 @@
-### Android ###
-*.iml
-.gradle
-/local.properties
-/.idea
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local configuration
 local.properties
 
-### App Build Outputs ###
-app/build/
-app/release.keystore
-
-### Gradle ###
-.gradle/
-gradle-app.setting
-!gradle-wrapper.jar
-!gradle-wrapper.properties
-
-### IntelliJ IDEA ###
-*.iws
+# IntelliJ IDEA
+.idea/
 *.iml
 *.ipr
-out/
-.idea/
+*.iws
 
-### Keystore（签名文件绝对不要提交！）###
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Android Studio
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+
+# Windows
+*.log
+Thumbs.db
+
+# macOS
+.DS_Store
+
+# GitHub Actions
+!.github/workflows/
+
+# Release
 *.jks
 *.keystore
-keystore.properties
-
-### 系统文件 ###
-.DS_Store
-Thumbs.db

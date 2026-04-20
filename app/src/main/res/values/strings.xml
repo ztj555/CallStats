@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">通话统计</string>
-    <string name="permission_rationale">本应用需要读取通话记录权限以统计分析您的通话数据，联系人权限用于显示联系人姓名。所有数据仅在本地处理，不会上传。</string>
+    <string name="select_start_date">选择开始日期</string>
+    <string name="select_end_date">选择结束日期</string>
+    <string name="query">查询</string>
+    <string name="total_calls">总通话次数</string>
+    <string name="total_duration">总通话时长</string>
+    <string name="incoming_calls">来电次数</string>
+    <string name="outgoing_calls">去电次数</string>
+    <string name="missed_calls">未接来电</string>
+    <string name="incoming_duration">来电时长</string>
+    <string name="outgoing_duration">去电时长</string>
+    <string name="no_permission">请授予通话记录读取权限</string>
+    <string name="permission_denied">权限被拒绝，无法读取通话记录</string>
+    <string name="format_calls">%d 次</string>
+    <string name="format_duration">%s</string>
+    <string name="time_range">统计时间段</string>
 </resources>

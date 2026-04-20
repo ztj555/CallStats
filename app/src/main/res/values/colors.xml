@@ -1,27 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 主题色 -->
-    <color name="colorPrimary">#1565C0</color>
-    <color name="colorPrimaryDark">#0D47A1</color>
-    <color name="colorAccent">#FF6F00</color>
-
-    <!-- 背景 -->
-    <color name="background">#F5F5F5</color>
-    <color name="card_background">#FFFFFF</color>
-
-    <!-- 文字 -->
-    <color name="text_primary">#212121</color>
-    <color name="text_secondary">#757575</color>
-    <color name="text_hint">#9E9E9E</color>
-
-    <!-- 分割线 -->
-    <color name="divider">#E0E0E0</color>
-
-    <!-- 通话类型颜色 -->
-    <color name="type_outgoing">#1565C0</color>   <!-- 去电：蓝色 -->
-    <color name="type_incoming">#2E7D32</color>   <!-- 来电：绿色 -->
-    <color name="type_missed">#C62828</color>      <!-- 未接：红色 -->
-
-    <!-- 水印颜色（低透明度） -->
-    <color name="watermark_color">#33888888</color>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="watermark_color">#80000000</color>
+    <color name="card_background">#FFF5F5F5</color>
+    <color name="primary">#FF2196F3</color>
+    <color name="primary_dark">#FF1976D2</color>
 </resources>
