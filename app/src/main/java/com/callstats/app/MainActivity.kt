@@ -82,7 +82,7 @@ class MainActivity : AppCompatActivity() {
         isCompactMode = true
         binding.scrollStandard.visibility = View.GONE
         binding.fabQuery.visibility = View.VISIBLE
-        binding.cardCompactResults.visibility = View.VISIBLE
+        binding.compactContainer.visibility = View.VISIBLE
         binding.rvCallLogs.visibility = View.VISIBLE
     }
 
@@ -91,7 +91,7 @@ class MainActivity : AppCompatActivity() {
         isCompactMode = false
         binding.scrollStandard.visibility = View.VISIBLE
         binding.fabQuery.visibility = View.GONE
-        binding.cardCompactResults.visibility = View.GONE
+        binding.compactContainer.visibility = View.GONE
         binding.rvCallLogs.visibility = View.GONE
     }
 
