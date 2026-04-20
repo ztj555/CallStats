@@ -30,6 +30,8 @@ class MainActivity : AppCompatActivity() {
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val displayDateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
+    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    private val weekdayFormat = SimpleDateFormat("EEE", Locale.CHINESE)
 
     // 通话记录列表数据
     private val callLogList = mutableListOf<CallLogItem>()
@@ -297,6 +299,7 @@ class MainActivity : AppCompatActivity() {
                 val type = it.getInt(typeIndex)
                 val duration = it.getInt(durationIndex)
                 val date = it.getLong(dateIndex)
+                val dateObj = Date(date)
 
                 // 添加到列表用于显示
                 val typeText = when (type) {
@@ -305,7 +308,16 @@ class MainActivity : AppCompatActivity() {
                     CallLog.Calls.MISSED_TYPE -> "未接"
                     else -> "未知"
                 }
-                callLogList.add(CallLogItem(number, typeText, formatDuration(duration), dateFormat.format(Date(date))))
+                val weekdayText = weekdayFormat.format(dateObj)
+                val timeText = timeFormat.format(dateObj)
+                callLogList.add(CallLogItem(
+                    number,
+                    typeText,
+                    formatDuration(duration),
+                    dateFormat.format(dateObj),
+                    weekdayText,
+                    timeText
+                ))
 
                 when (type) {
                     CallLog.Calls.INCOMING_TYPE -> {
@@ -361,7 +373,9 @@ class MainActivity : AppCompatActivity() {
         val number: String,
         val type: String,
         val duration: String,
-        val date: String
+        val date: String,
+        val weekday: String,
+        val time: String
     )
 
     // RecyclerView适配器
@@ -373,6 +387,8 @@ class MainActivity : AppCompatActivity() {
             val tvType: TextView = itemView.findViewById(R.id.tvType)
             val tvDuration: TextView = itemView.findViewById(R.id.tvDuration)
             val tvDate: TextView = itemView.findViewById(R.id.tvDate)
+            val tvWeekday: TextView = itemView.findViewById(R.id.tvWeekday)
+            val tvTime: TextView = itemView.findViewById(R.id.tvTime)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -387,6 +403,8 @@ class MainActivity : AppCompatActivity() {
             holder.tvType.text = item.type
             holder.tvDuration.text = item.duration
             holder.tvDate.text = item.date
+            holder.tvWeekday.text = " ${item.weekday}"
+            holder.tvTime.text = item.time
         }
 
         override fun getItemCount() = list.size
