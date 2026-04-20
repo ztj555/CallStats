@@ -82,7 +82,7 @@ class MainActivity : AppCompatActivity() {
         isCompactMode = true
         binding.scrollStandard.visibility = View.GONE
         binding.fabQuery.visibility = View.VISIBLE
-        binding.cardCompactResults.visibility = View.VISIBLE
+        binding.scrollCompact.visibility = View.VISIBLE
         binding.rvCallLogs.visibility = View.VISIBLE
     }
 
@@ -91,7 +91,7 @@ class MainActivity : AppCompatActivity() {
         isCompactMode = false
         binding.scrollStandard.visibility = View.VISIBLE
         binding.fabQuery.visibility = View.GONE
-        binding.cardCompactResults.visibility = View.GONE
+        binding.scrollCompact.visibility = View.GONE
         binding.rvCallLogs.visibility = View.GONE
     }
 
@@ -234,13 +234,18 @@ class MainActivity : AppCompatActivity() {
 
         binding.cardResults.visibility = View.VISIBLE
 
-        // 显示结果到查询界面（紧凑模式）
+        // 显示结果到查询界面（完整内容，80%宽度）
         binding.tvCompactTimeRange.text = timeRangeText
         binding.tvCompactTotalCalls.text = stats.totalCalls.toString()
         binding.tvCompactTotalDuration.text = formatDuration(stats.totalDuration)
-        binding.tvCompactIncoming.text = "${stats.incomingCalls}"
-        binding.tvCompactOutgoing.text = "${stats.outgoingCalls}"
-        binding.tvCompactMissed.text = "${stats.missedCalls}"
+
+        binding.tvCompactIncomingCalls.text = "${stats.incomingCalls} 次"
+        binding.tvCompactIncomingDuration.text = formatDuration(stats.incomingDuration)
+
+        binding.tvCompactOutgoingCalls.text = "${stats.outgoingCalls} 次"
+        binding.tvCompactOutgoingDuration.text = formatDuration(stats.outgoingDuration)
+
+        binding.tvCompactMissedCalls.text = "${stats.missedCalls} 次"
     }
 
     private fun queryCallLog(): CallStats {
