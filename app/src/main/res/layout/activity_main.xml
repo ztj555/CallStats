@@ -269,14 +269,19 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- 标题 -->
+            <!-- 标题（可点击进入通话记录界面） -->
             <TextView
+                android:id="@+id/tvTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:text="@string/app_name"
                 android:textSize="24sp"
                 android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground"
+                android:padding="8dp"
                 android:layout_marginBottom="16dp" />
 
             <!-- 快捷日期选项 -->

@@ -27,6 +27,7 @@ class MainActivity : AppCompatActivity() {
     private var endDate: Long = 0
     private var timeRangeText: String = ""
     private var isCompactMode = true // 默认显示查询界面
+    private var isCallLogMode = false // 通话记录界面
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val displayDateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
@@ -72,6 +73,11 @@ class MainActivity : AppCompatActivity() {
         binding.fabQuery.setOnClickListener {
             switchToStandardMode()
         }
+
+        // 标题点击 - 切换到通话记录界面
+        binding.tvTitle.setOnClickListener {
+            switchToCallLogMode()
+        }
     }
 
     private fun initRecyclerView() {
@@ -82,19 +88,33 @@ class MainActivity : AppCompatActivity() {
     // 切换到查询界面（紧凑模式）
     private fun switchToCompactMode() {
         isCompactMode = true
+        isCallLogMode = false
         binding.scrollStandard.visibility = View.GONE
         binding.fabQuery.visibility = View.VISIBLE
         binding.cardCompactResults.visibility = View.VISIBLE
         binding.rvCallLogs.visibility = View.VISIBLE
+        binding.rvCallLogs.alpha = 0.3f // 查询界面背景半透明
     }
 
     // 切换到标准界面
     private fun switchToStandardMode() {
         isCompactMode = false
+        isCallLogMode = false
         binding.scrollStandard.visibility = View.VISIBLE
         binding.fabQuery.visibility = View.GONE
         binding.cardCompactResults.visibility = View.GONE
         binding.rvCallLogs.visibility = View.GONE
+        binding.rvCallLogs.alpha = 1.0f // 恢复正常透明度
+    }
+
+    // 切换到通话记录界面（只显示通话记录，无统计板块）
+    private fun switchToCallLogMode() {
+        isCallLogMode = true
+        binding.scrollStandard.visibility = View.GONE
+        binding.fabQuery.visibility = View.VISIBLE
+        binding.cardCompactResults.visibility = View.GONE
+        binding.rvCallLogs.visibility = View.VISIBLE
+        binding.rvCallLogs.alpha = 1.0f // 通话记录界面显示完整透明度
     }
 
     // 当天：今天到今天
@@ -408,6 +428,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun getItemCount() = list.size
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 如果在通话记录界面或查询界面，重新加载数据
+        if (isCallLogMode || isCompactMode) {
+            queryCallStats()
+        }
     }
 
     companion object {
