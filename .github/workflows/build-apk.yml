@@ -2,15 +2,15 @@ name: Build APK
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "master", "main" ]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "master", "main" ]
   # 允许手动触发
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build Debug & Release APK
+    name: Build Debug APK
     runs-on: ubuntu-latest
 
     steps:
@@ -18,63 +18,48 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. 设置 JDK 17（Android Gradle Plugin 8.x 要求）
+      # 2. 设置 JDK 17
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
-      # 3. 赋予 gradlew 可执行权限
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      # 3. 设置 Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      # 4. 构建 Debug APK（无需签名，直接可用）
+      # 4. 设置 Gradle（指定版本，自动下载，不需要 gradle-wrapper.jar）
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.6'
+
+      # 5. 构建 Debug APK
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: gradle assembleDebug --no-daemon --stacktrace
 
-      # 5. 上传 Debug APK 为 Artifact（可在 Actions 页面直接下载）
-      - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: CallAnalyzer-Debug-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
-
-      # 6. 构建 Release APK（使用 Secrets 中的签名信息，可选）
-      - name: Build Release APK (Signed)
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+      # 6. 重命名 APK
+      - name: Rename APK
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > app/release.keystore
-          ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file="$(pwd)/app/release.keystore" \
-            -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
-            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
-            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+          mkdir -p output
+          cp app/build/outputs/apk/debug/app-debug.apk "output/通话统计-${{ github.sha }}.apk"
 
-      # 7. 上传 Release APK
-      - name: Upload Release APK
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+      # 7. 上传 APK 为 Artifact（可在 Actions 页面直接下载）
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: CallAnalyzer-Release-APK
-          path: app/build/outputs/apk/release/app-release.apk
+          name: CallAnalyzer-APK
+          path: output/*.apk
           retention-days: 30
 
   # ──────────────────────────────────────────
-  # 可选：打 Tag 时自动发布 GitHub Release
+  # 打 Tag 时自动发布 GitHub Release
   # ──────────────────────────────────────────
   release:
     name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
-    # 只有推送 v* 格式的 tag 才触发（如 v1.0.0）
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
@@ -86,13 +71,17 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Build Release APK
-        run: ./gradlew assembleDebug
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.6'
+
+      - name: Build Debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -103,11 +92,12 @@ jobs:
             ## 通话统计分析 APP ${{ github.ref_name }}
             
             ### 下载说明
-            - **app-debug.apk** — 直接安装即可使用（debug 版本）
+            - **app-debug.apk** — 直接安装即可使用
             
             ### 安装要求
-            - Android 7.0 (API 24) 及以上
+            - Android 8.0 (API 26) 及以上
             - 安装时需允许「未知来源」
+            - 首次打开需授予「读取通话记录」权限
           draft: false
           prerelease: false
         env:
