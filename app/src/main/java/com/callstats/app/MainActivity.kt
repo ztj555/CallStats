@@ -31,23 +31,78 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         initViews()
-        setDefaultDates()
+        // 默认显示当天
+        setToday()
         checkPermission()
     }
 
     private fun initViews() {
+        // 快捷日期按钮
+        binding.btnToday.setOnClickListener { setToday() }
+        binding.btnYesterday.setOnClickListener { setYesterday() }
+        binding.btnWeek.setOnClickListener { setWeek() }
+        binding.btnCustom.setOnClickListener { showCustomPicker() }
+
+        // 日期选择按钮
         binding.btnStartDate.setOnClickListener { showDatePicker(true) }
         binding.btnEndDate.setOnClickListener { showDatePicker(false) }
+
+        // 查询按钮
         binding.btnQuery.setOnClickListener { queryCallStats() }
+    }
+
+    // 当天：今天到今天
+    private fun setToday() {
+        val calendar = Calendar.getInstance()
+        startDate = calendar.timeInMillis
+        endDate = calendar.timeInMillis
+        updateDateButtons()
+        updateButtonStates(0)
+        // 自动查询
+        queryCallStats()
+    }
+
+    // 昨天：昨天到昨天
+    private fun setYesterday() {
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DAY_OF_YEAR, -1)
+        startDate = calendar.timeInMillis
+        endDate = calendar.timeInMillis
+        updateDateButtons()
+        updateButtonStates(1)
+        queryCallStats()
+    }
+
+    // 一周：最近7天
+    private fun setWeek() {
+        val calendar = Calendar.getInstance()
+        endDate = calendar.timeInMillis
+        calendar.add(Calendar.DAY_OF_YEAR, -6)
+        startDate = calendar.timeInMillis
+        updateDateButtons()
+        updateButtonStates(2)
+        queryCallStats()
+    }
+
+    // 自定义：显示日期选择器
+    private fun showCustomPicker() {
+        updateButtonStates(3)
+        // 先选开始日期
+        showDatePicker(true)
+    }
+
+    // 更新按钮选中状态
+    private fun updateButtonStates(selected: Int) {
+        binding.btnToday.isChecked = selected == 0
+        binding.btnYesterday.isChecked = selected == 1
+        binding.btnWeek.isChecked = selected == 2
+        binding.btnCustom.isChecked = selected == 3
     }
 
     private fun setDefaultDates() {
         val calendar = Calendar.getInstance()
         endDate = calendar.timeInMillis
-
-        calendar.add(Calendar.MONTH, -1)
         startDate = calendar.timeInMillis
-
         updateDateButtons()
     }
 
@@ -68,10 +123,13 @@ class MainActivity : AppCompatActivity() {
 
                 if (isStartDate) {
                     startDate = calendar.timeInMillis
+                    // 选完开始日期后自动选结束日期
+                    showDatePicker(false)
                 } else {
                     endDate = calendar.timeInMillis
+                    updateDateButtons()
+                    queryCallStats()
                 }
-                updateDateButtons()
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
@@ -99,6 +157,8 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == REQUEST_READ_CALL_LOG) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(this, "权限已授予", Toast.LENGTH_SHORT).show()
+                // 权限授予后自动查询
+                queryCallStats()
             } else {
                 Toast.makeText(this, "权限被拒绝，无法读取通话记录", Toast.LENGTH_LONG).show()
             }
@@ -115,9 +175,6 @@ class MainActivity : AppCompatActivity() {
 
         // 构建时间段文本
         timeRangeText = "${displayDateFormat.format(Date(startDate))} 至 ${displayDateFormat.format(Date(endDate))}"
-
-        // 设置水印
-        binding.watermarkContainer.setWatermarkText(timeRangeText)
 
         // 查询通话记录
         val stats = queryCallLog()
