@@ -6,11 +6,16 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.os.Bundle
 import android.provider.CallLog
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.callstats.app.databinding.ActivityMainBinding
 import java.text.SimpleDateFormat
 import java.util.*
@@ -21,9 +26,13 @@ class MainActivity : AppCompatActivity() {
     private var startDate: Long = 0
     private var endDate: Long = 0
     private var timeRangeText: String = ""
+    private var isCompactMode = true // 默认显示查询界面
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val displayDateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
+
+    // 通话记录列表数据
+    private val callLogList = mutableListOf<CallLogItem>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,9 +40,13 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         initViews()
+        initRecyclerView()
         // 默认显示当天
         setToday()
         checkPermission()
+
+        // 默认显示查询界面
+        switchToCompactMode()
     }
 
     private fun initViews() {
@@ -47,8 +60,39 @@ class MainActivity : AppCompatActivity() {
         binding.btnStartDate.setOnClickListener { showDatePicker(true) }
         binding.btnEndDate.setOnClickListener { showDatePicker(false) }
 
-        // 查询按钮
-        binding.btnQuery.setOnClickListener { queryCallStats() }
+        // 标准界面查询按钮 - 切换到查询界面
+        binding.btnQuery.setOnClickListener {
+            queryCallStats()
+            switchToCompactMode()
+        }
+
+        // 查询界面的FAB按钮 - 切换到标准界面
+        binding.fabQuery.setOnClickListener {
+            switchToStandardMode()
+        }
+    }
+
+    private fun initRecyclerView() {
+        binding.rvCallLogs.layoutManager = LinearLayoutManager(this)
+        binding.rvCallLogs.adapter = CallLogAdapter(callLogList)
+    }
+
+    // 切换到查询界面（紧凑模式）
+    private fun switchToCompactMode() {
+        isCompactMode = true
+        binding.scrollStandard.visibility = View.GONE
+        binding.fabQuery.visibility = View.VISIBLE
+        binding.cardCompactResults.visibility = View.VISIBLE
+        binding.rvCallLogs.visibility = View.VISIBLE
+    }
+
+    // 切换到标准界面
+    private fun switchToStandardMode() {
+        isCompactMode = false
+        binding.scrollStandard.visibility = View.VISIBLE
+        binding.fabQuery.visibility = View.GONE
+        binding.cardCompactResults.visibility = View.GONE
+        binding.rvCallLogs.visibility = View.GONE
     }
 
     // 当天：今天到今天
@@ -58,7 +102,6 @@ class MainActivity : AppCompatActivity() {
         endDate = calendar.timeInMillis
         updateDateButtons()
         updateButtonStates(0)
-        // 自动查询
         queryCallStats()
     }
 
@@ -87,7 +130,6 @@ class MainActivity : AppCompatActivity() {
     // 自定义：显示日期选择器
     private fun showCustomPicker() {
         updateButtonStates(3)
-        // 先选开始日期
         showDatePicker(true)
     }
 
@@ -123,7 +165,6 @@ class MainActivity : AppCompatActivity() {
 
                 if (isStartDate) {
                     startDate = calendar.timeInMillis
-                    // 选完开始日期后自动选结束日期
                     showDatePicker(false)
                 } else {
                     endDate = calendar.timeInMillis
@@ -157,7 +198,6 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == REQUEST_READ_CALL_LOG) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(this, "权限已授予", Toast.LENGTH_SHORT).show()
-                // 权限授予后自动查询
                 queryCallStats()
             } else {
                 Toast.makeText(this, "权限被拒绝，无法读取通话记录", Toast.LENGTH_LONG).show()
@@ -179,7 +219,7 @@ class MainActivity : AppCompatActivity() {
         // 查询通话记录
         val stats = queryCallLog()
 
-        // 显示结果
+        // 显示结果到标准界面
         binding.tvTimeRange.text = "统计时间段：$timeRangeText"
         binding.tvTotalCalls.text = stats.totalCalls.toString()
         binding.tvTotalDuration.text = formatDuration(stats.totalDuration)
@@ -193,10 +233,19 @@ class MainActivity : AppCompatActivity() {
         binding.tvMissedCalls.text = "${stats.missedCalls} 次"
 
         binding.cardResults.visibility = View.VISIBLE
+
+        // 显示结果到查询界面（紧凑模式）
+        binding.tvCompactTimeRange.text = timeRangeText
+        binding.tvCompactTotalCalls.text = stats.totalCalls.toString()
+        binding.tvCompactTotalDuration.text = formatDuration(stats.totalDuration)
+        binding.tvCompactIncoming.text = "${stats.incomingCalls}"
+        binding.tvCompactOutgoing.text = "${stats.outgoingCalls}"
+        binding.tvCompactMissed.text = "${stats.missedCalls}"
     }
 
     private fun queryCallLog(): CallStats {
         val stats = CallStats()
+        callLogList.clear()
 
         // 设置结束时间为当天的23:59:59
         val endCalendar = Calendar.getInstance()
@@ -222,8 +271,10 @@ class MainActivity : AppCompatActivity() {
         val cursor: Cursor? = contentResolver.query(
             CallLog.Calls.CONTENT_URI,
             arrayOf(
+                CallLog.Calls.NUMBER,
                 CallLog.Calls.TYPE,
-                CallLog.Calls.DURATION
+                CallLog.Calls.DURATION,
+                CallLog.Calls.DATE
             ),
             selection,
             selectionArgs,
@@ -231,12 +282,25 @@ class MainActivity : AppCompatActivity() {
         )
 
         cursor?.use {
+            val numberIndex = it.getColumnIndex(CallLog.Calls.NUMBER)
             val typeIndex = it.getColumnIndex(CallLog.Calls.TYPE)
             val durationIndex = it.getColumnIndex(CallLog.Calls.DURATION)
+            val dateIndex = it.getColumnIndex(CallLog.Calls.DATE)
 
             while (it.moveToNext()) {
+                val number = it.getString(numberIndex) ?: "未知"
                 val type = it.getInt(typeIndex)
                 val duration = it.getInt(durationIndex)
+                val date = it.getLong(dateIndex)
+
+                // 添加到列表用于显示
+                val typeText = when (type) {
+                    CallLog.Calls.INCOMING_TYPE -> "来电"
+                    CallLog.Calls.OUTGOING_TYPE -> "去电"
+                    CallLog.Calls.MISSED_TYPE -> "未接"
+                    else -> "未知"
+                }
+                callLogList.add(CallLogItem(number, typeText, formatDuration(duration), dateFormat.format(Date(date))))
 
                 when (type) {
                     CallLog.Calls.INCOMING_TYPE -> {
@@ -258,6 +322,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+        // 更新RecyclerView
+        binding.rvCallLogs.adapter?.notifyDataSetChanged()
 
         return stats
     }
@@ -283,6 +350,42 @@ class MainActivity : AppCompatActivity() {
         var outgoingDuration: Int = 0,
         var missedCalls: Int = 0
     )
+
+    // 通话记录数据类
+    data class CallLogItem(
+        val number: String,
+        val type: String,
+        val duration: String,
+        val date: String
+    )
+
+    // RecyclerView适配器
+    inner class CallLogAdapter(private val list: List<CallLogItem>) :
+        RecyclerView.Adapter<CallLogAdapter.ViewHolder>() {
+
+        inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            val tvNumber: TextView = itemView.findViewById(R.id.tvNumber)
+            val tvType: TextView = itemView.findViewById(R.id.tvType)
+            val tvDuration: TextView = itemView.findViewById(R.id.tvDuration)
+            val tvDate: TextView = itemView.findViewById(R.id.tvDate)
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_call_log, parent, false)
+            return ViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val item = list[position]
+            holder.tvNumber.text = item.number
+            holder.tvType.text = item.type
+            holder.tvDuration.text = item.duration
+            holder.tvDate.text = item.date
+        }
+
+        override fun getItemCount() = list.size
+    }
 
     companion object {
         private const val REQUEST_READ_CALL_LOG = 1001
