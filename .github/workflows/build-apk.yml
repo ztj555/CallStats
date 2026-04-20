@@ -5,7 +5,6 @@ on:
     branches: [ "master", "main" ]
   pull_request:
     branches: [ "master", "main" ]
-  # 允许手动触发
   workflow_dispatch:
 
 jobs:
@@ -14,38 +13,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 拉取代码
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. 设置 JDK 17
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 3. 设置 Android SDK
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 4. 设置 Gradle（指定版本，自动下载，不需要 gradle-wrapper.jar）
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.6'
 
-      # 5. 构建 Debug APK
       - name: Build Debug APK
         run: gradle assembleDebug --no-daemon --stacktrace
 
-      # 6. 重命名 APK
       - name: Rename APK
         run: |
           mkdir -p output
           cp app/build/outputs/apk/debug/app-debug.apk "output/通话统计-${{ github.sha }}.apk"
 
-      # 7. 上传 APK 为 Artifact（可在 Actions 页面直接下载）
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
@@ -53,9 +45,6 @@ jobs:
           path: output/*.apk
           retention-days: 30
 
-  # ──────────────────────────────────────────
-  # 打 Tag 时自动发布 GitHub Release
-  # ──────────────────────────────────────────
   release:
     name: Publish GitHub Release
     needs: build
@@ -76,7 +65,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.6'
 
@@ -91,13 +80,8 @@ jobs:
           body: |
             ## 通话统计分析 APP ${{ github.ref_name }}
             
-            ### 下载说明
-            - **app-debug.apk** — 直接安装即可使用
-            
-            ### 安装要求
-            - Android 8.0 (API 26) 及以上
-            - 安装时需允许「未知来源」
-            - 首次打开需授予「读取通话记录」权限
+            - 直接安装即可使用
+            - Android 8.0+ ，需授予「读取通话记录」权限
           draft: false
           prerelease: false
         env:
