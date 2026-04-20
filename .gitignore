@@ -1,0 +1,37 @@
+### Android ###
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+### App Build Outputs ###
+app/build/
+app/release.keystore
+
+### Gradle ###
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+
+### IntelliJ IDEA ###
+*.iws
+*.iml
+*.ipr
+out/
+.idea/
+
+### Keystore（签名文件绝对不要提交！）###
+*.jks
+*.keystore
+keystore.properties
+
+### 系统文件 ###
+.DS_Store
+Thumbs.db

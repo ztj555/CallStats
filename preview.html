@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>通话统计 APP - UI 预览</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Roboto', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #ECEFF1;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 32px 16px;
+    gap: 32px;
+    flex-wrap: wrap;
+    min-height: 100vh;
+  }
+
+  /* ===== 手机外壳 ===== */
+  .phone {
+    width: 360px;
+    border-radius: 36px;
+    background: #1A1A2E;
+    padding: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    flex-shrink: 0;
+  }
+  .phone-screen {
+    border-radius: 28px;
+    overflow: hidden;
+    background: #F5F5F5;
+    position: relative;
+    height: 720px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== AppBar ===== */
+  .app-bar {
+    background: #1565C0;
+    flex-shrink: 0;
+  }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 56px;
+    color: white;
+  }
+  .toolbar-title {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  .toolbar-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    transition: background 0.2s;
+  }
+  .toolbar-icon:hover { background: rgba(255,255,255,0.3); }
+  .date-bar {
+    background: #0D47A1;
+    padding: 6px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    font-size: 13px;
+  }
+  .date-label { opacity: 0.9; }
+  .count-label { opacity: 0.7; font-size: 12px; }
+
+  /* ===== 水印 ===== */
+  .watermark-container {
+    position: absolute;
+    top: 100px;
+    left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1;
+  }
+  .watermark-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+
+  /* ===== 通话列表 ===== */
+  .list-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+    position: relative;
+    z-index: 2;
+  }
+  .call-item {
+    margin: 4px 12px;
+    background: white;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    gap: 12px;
+  }
+  .call-type-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+  .badge-out { background: #E3F2FD; color: #1565C0; border: 1px solid #90CAF9; }
+  .badge-in  { background: #E8F5E9; color: #2E7D32; border: 1px solid #A5D6A7; }
+  .badge-miss{ background: #FFEBEE; color: #C62828; border: 1px solid #FFCDD2; }
+
+  .call-info { flex: 1; min-width: 0; }
+  .call-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #212121;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .call-number {
+    font-size: 12px;
+    color: #757575;
+    margin-top: 2px;
+  }
+  .call-meta {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .call-time { font-size: 12px; color: #757575; }
+  .call-duration { font-size: 12px; color: #9E9E9E; margin-top: 4px; }
+
+  /* ===== FAB ===== */
+  .fab-group {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+    z-index: 10;
+  }
+  .fab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 20px 0 16px;
+    height: 44px;
+    border-radius: 22px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: transform 0.15s, box-shadow 0.15s;
+    user-select: none;
+  }
+  .fab:hover { transform: scale(1.05); box-shadow: 0 6px 16px rgba(0,0,0,0.35); }
+  .fab-query { background: #1565C0; }
+  .fab-stats { background: #FF6F00; }
+  .fab-icon { font-size: 16px; }
+
+  /* ===== 弹窗 ===== */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .overlay.show { opacity: 1; pointer-events: all; }
+
+  .dialog {
+    background: white;
+    border-radius: 16px;
+    width: 340px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+  }
+  .dialog-title {
+    padding: 20px 20px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #212121;
+  }
+  .dialog-body { padding: 16px 20px; }
+  .section-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1565C0;
+    margin-bottom: 8px;
+    margin-top: 12px;
+  }
+  .section-label:first-child { margin-top: 0; }
+  .radio-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .radio-btn {
+    padding: 6px 14px;
+    border-radius: 16px;
+    border: 1.5px solid #BDBDBD;
+    font-size: 13px;
+    color: #616161;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .radio-btn.active {
+    border-color: #1565C0;
+    background: #E3F2FD;
+    color: #1565C0;
+    font-weight: 500;
+  }
+  .dialog-divider {
+    height: 1px;
+    background: #EEEEEE;
+    margin: 12px 0;
+  }
+  .input-field {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid #BDBDBD;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #212121;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-field:focus { border-color: #1565C0; }
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 8px 20px 16px;
+  }
+  .btn-cancel {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #757575;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .btn-confirm {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    background: #1565C0;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .btn-confirm:hover { background: #0D47A1; }
+
+  /* 统计弹窗 */
+  .stats-content {
+    padding: 16px 20px 20px;
+    line-height: 2;
+    font-size: 14px;
+    color: #424242;
+  }
+  .stats-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1565C0;
+    margin-top: 12px;
+    margin-bottom: 4px;
+  }
+  .stats-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+    border-bottom: 1px dashed #EEEEEE;
+  }
+  .stats-row:last-child { border-bottom: none; }
+  .stats-key { color: #757575; }
+  .stats-value { font-weight: 600; color: #212121; }
+  .stats-highlight .stats-value { color: #1565C0; font-size: 16px; }
+
+  /* ===== 标签说明区 ===== */
+  .desc-panel {
+    width: 300px;
+    flex-shrink: 0;
+  }
+  .desc-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .desc-card h3 {
+    font-size: 15px;
+    color: #1565C0;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #E3F2FD;
+  }
+  .desc-card p, .desc-card li {
+    font-size: 13px;
+    color: #424242;
+    line-height: 1.8;
+  }
+  .desc-card ul { padding-left: 16px; }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    margin: 2px 3px;
+  }
+  .tag-blue { background: #E3F2FD; color: #1565C0; }
+  .tag-green { background: #E8F5E9; color: #2E7D32; }
+  .tag-orange { background: #FFF3E0; color: #E65100; }
+  .tag-red { background: #FFEBEE; color: #C62828; }
+
+  /* 水印文字样式（CSS模拟） */
+  .wm-text {
+    position: absolute;
+    color: rgba(100,100,100,0.2);
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    transform: rotate(-15deg);
+    pointer-events: none;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== 主界面手机 ===== -->
+<div class="phone">
+  <div class="phone-screen">
+    <!-- AppBar -->
+    <div class="app-bar">
+      <div class="toolbar">
+        <span class="toolbar-title">📞 通话统计</span>
+        <div class="toolbar-icon" onclick="refreshData()">🔄</div>
+      </div>
+      <div class="date-bar">
+        <span class="date-label" id="date-label">本月（2026/04/01-2026/04/30）</span>
+        <span class="count-label" id="count-label">共 8 条</span>
+      </div>
+    </div>
+
+    <!-- 水印容器（Canvas 模拟） -->
+    <div class="watermark-container">
+      <canvas class="watermark-canvas" id="watermark-canvas"></canvas>
+    </div>
+
+    <!-- 通话列表 -->
+    <div class="list-area" id="list-area">
+      <!-- 动态生成 -->
+    </div>
+
+    <!-- FAB -->
+    <div class="fab-group">
+      <div class="fab fab-stats" onclick="showStatsDialog()">
+        <span class="fab-icon">📊</span> 统计
+      </div>
+      <div class="fab fab-query" onclick="showQueryDialog()">
+        <span class="fab-icon">🔍</span> 查询
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 说明面板 ===== -->
+<div class="desc-panel">
+  <div class="desc-card">
+    <h3>🏗 技术架构</h3>
+    <ul>
+      <li>语言：<strong>Kotlin</strong></li>
+      <li>架构：<strong>MVVM</strong> (ViewModel + LiveData + Flow)</li>
+      <li>数据库：<strong>Room</strong></li>
+      <li>UI：<strong>Material Design 3</strong></li>
+      <li>权限：READ_CALL_LOG + READ_CONTACTS</li>
+    </ul>
+  </div>
+
+  <div class="desc-card">
+    <h3>🔍 查询维度</h3>
+    <p><strong>时间范围：</strong></p>
+    <span class="tag tag-blue">今天</span>
+    <span class="tag tag-blue">本周</span>
+    <span class="tag tag-blue">本月</span>
+    <span class="tag tag-blue">自定义日期</span>
+    <p style="margin-top:8px"><strong>通话类型：</strong></p>
+    <span class="tag tag-green">来电</span>
+    <span class="tag tag-orange">去电</span>
+    <span class="tag tag-red">未接</span>
+    <p style="margin-top:8px"><strong>其他条件：</strong>号码/姓名关键词、最短通话时长（秒）</p>
+  </div>
+
+  <div class="desc-card">
+    <h3>🌊 水印实现原理</h3>
+    <ul>
+      <li>自定义 <code>WatermarkView extends View</code></li>
+      <li>Canvas 旋转 <strong>-15°</strong></li>
+      <li>透明度 <strong>20%</strong>（#33888888）</li>
+      <li>错行平铺（奇偶行交错）</li>
+      <li>水印文字 = 当前查询时间段</li>
+      <li>查询条件变化 → 自动 invalidate() 重绘</li>
+    </ul>
+  </div>
+
+  <div class="desc-card">
+    <h3>📂 核心文件</h3>
+    <ul>
+      <li><code>CallLogEntity.kt</code> — Room 实体</li>
+      <li><code>CallLogDao.kt</code> — 多条件SQL查询</li>
+      <li><code>CallLogRepository.kt</code> — 系统通话记录读取</li>
+      <li><code>QueryFilter.kt</code> — 查询条件模型</li>
+      <li><code>WatermarkView.kt</code> — 水印自定义View</li>
+      <li><code>MainViewModel.kt</code> — 状态管理</li>
+      <li><code>MainActivity.kt</code> — 界面与交互</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== 查询弹窗 ===== -->
+<div class="overlay" id="query-overlay" onclick="closeIfOutside(event,'query-dialog')">
+  <div class="dialog" id="query-dialog">
+    <div class="dialog-title">🔍 筛选条件</div>
+    <div class="dialog-body">
+
+      <div class="section-label">时间范围</div>
+      <div class="radio-group" id="rg-time">
+        <div class="radio-btn" onclick="selectTime(this,'今天')">今天</div>
+        <div class="radio-btn" onclick="selectTime(this,'本周')">本周</div>
+        <div class="radio-btn active" onclick="selectTime(this,'本月')">本月</div>
+        <div class="radio-btn" onclick="selectTime(this,'自定义')">自定义</div>
+      </div>
+
+      <!-- 自定义日期区域（默认隐藏） -->
+      <div id="custom-date-row" style="display:none;margin-top:10px;gap:8px;align-items:center">
+        <div style="flex:1">
+          <div style="font-size:11px;color:#9E9E9E;margin-bottom:3px">开始日期</div>
+          <input type="date" id="custom-start" class="input-field" style="padding:7px 10px;font-size:13px">
+        </div>
+        <div style="color:#9E9E9E;padding-top:16px">—</div>
+        <div style="flex:1">
+          <div style="font-size:11px;color:#9E9E9E;margin-bottom:3px">结束日期</div>
+          <input type="date" id="custom-end" class="input-field" style="padding:7px 10px;font-size:13px">
+        </div>
+      </div>
+
+      <div class="dialog-divider"></div>
+      <div class="section-label">通话类型</div>
+      <div class="radio-group" id="rg-type">
+        <div class="radio-btn active" onclick="selectType(this)">全部</div>
+        <div class="radio-btn" onclick="selectType(this)">去电</div>
+        <div class="radio-btn" onclick="selectType(this)">来电</div>
+        <div class="radio-btn" onclick="selectType(this)">未接</div>
+      </div>
+
+      <div class="dialog-divider"></div>
+      <div class="section-label">号码 / 姓名</div>
+      <input class="input-field" type="text" placeholder="输入号码或姓名关键词" id="keyword-input">
+
+      <div class="dialog-divider"></div>
+      <div class="section-label">最短通话时长（秒）</div>
+      <input class="input-field" type="number" placeholder="0（不限制）" id="min-duration-input" style="margin-top:4px">
+    </div>
+    <div class="dialog-actions">
+      <button class="btn-cancel" onclick="closeDialog('query-overlay')">取消</button>
+      <button class="btn-confirm" onclick="applyQuery()">查询</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 统计弹窗 ===== -->
+<div class="overlay" id="stats-overlay" onclick="closeIfOutside(event,'stats-dialog')">
+  <div class="dialog" id="stats-dialog">
+    <div class="dialog-title">📊 通话统计</div>
+    <div class="stats-content" id="stats-content">
+      <!-- 动态生成 -->
+    </div>
+    <div class="dialog-actions">
+      <button class="btn-confirm" onclick="closeDialog('stats-overlay')">确定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 模拟数据 =====
+const allLogs = [
+  { name:'张三', number:'138****1234', type:'out', date:'04-20 09:15', duration:'2分34秒' },
+  { name:'李四', number:'139****5678', type:'in',  date:'04-20 08:42', duration:'5分18秒' },
+  { name:null,  number:'010-88888888', type:'miss',date:'04-19 17:30', duration:'未接' },
+  { name:'王五', number:'186****9012', type:'out', date:'04-19 15:22', duration:'1分08秒' },
+  { name:'客服中心', number:'400-888-8888', type:'in', date:'04-18 14:10', duration:'8分02秒' },
+  { name:null,  number:'137****3456', type:'miss',date:'04-17 12:05', duration:'未接' },
+  { name:'赵六', number:'135****7890', type:'out', date:'04-16 10:30', duration:'3分45秒' },
+  { name:'钱七', number:'188****2345', type:'in',  date:'04-15 09:00', duration:'12分33秒' },
+];
+
+let currentLabel = '本月（2026/04/01-2026/04/30）';
+let currentLogs = [...allLogs];
+let selectedTime = '本月';
+
+// ===== 渲染通话列表 =====
+function renderList(logs) {
+  const area = document.getElementById('list-area');
+  area.innerHTML = '';
+  document.getElementById('count-label').textContent = '共 ' + logs.length + ' 条';
+
+  if (logs.length === 0) {
+    area.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#9E9E9E"><div style="font-size:48px">📭</div><div style="margin-top:8px">暂无通话记录</div></div>';
+    return;
+  }
+
+  logs.forEach(log => {
+    const badgeClass = log.type === 'out' ? 'badge-out' : log.type === 'in' ? 'badge-in' : 'badge-miss';
+    const typeLabel = log.type === 'out' ? '去电' : log.type === 'in' ? '来电' : '未接';
+    const nameHtml = log.name
+      ? `<div class="call-name">${log.name}</div><div class="call-number">${log.number}</div>`
+      : `<div class="call-name">${log.number}</div>`;
+
+    area.innerHTML += `
+      <div class="call-item">
+        <div class="call-type-badge ${badgeClass}">${typeLabel}</div>
+        <div class="call-info">${nameHtml}</div>
+        <div class="call-meta">
+          <div class="call-time">${log.date}</div>
+          <div class="call-duration">${log.duration}</div>
+        </div>
+      </div>`;
+  });
+}
+
+// ===== 水印绘制 =====
+function drawWatermark(text) {
+  const canvas = document.getElementById('watermark-canvas');
+  const container = canvas.parentElement;
+  canvas.width = container.offsetWidth;
+  canvas.height = container.offsetHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!text) return;
+
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(-15 * Math.PI / 180);
+  ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+  ctx.fillStyle = 'rgba(100,100,100,0.18)';
+  ctx.font = '14px PingFang SC, Microsoft YaHei, sans-serif';
+
+  const tw = ctx.measureText(text).width;
+  const stepX = tw + 80;
+  const stepY = 56;
+  const extra = Math.sqrt(canvas.width**2 + canvas.height**2);
+  const startX = -(extra - canvas.width) / 2 - stepX;
+  const startY = -(extra - canvas.height) / 2;
+
+  let ry = startY, row = 0;
+  while (ry < canvas.height + extra) {
+    let rx = startX + (row % 2 === 0 ? 0 : stepX / 2);
+    while (rx < canvas.width + extra) {
+      ctx.fillText(text, rx, ry);
+      rx += stepX;
+    }
+    ry += stepY;
+    row++;
+  }
+  ctx.restore();
+}
+
+// ===== 查询弹窗 =====
+function showQueryDialog() {
+  document.getElementById('query-overlay').classList.add('show');
+}
+function closeDialog(id) {
+  document.getElementById(id).classList.remove('show');
+}
+function closeIfOutside(e, dialogId) {
+  if (e.target === e.currentTarget) closeDialog(e.currentTarget.id);
+}
+
+function selectTime(el, label) {
+  document.querySelectorAll('#rg-time .radio-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  selectedTime = label;
+
+  const customRow = document.getElementById('custom-date-row');
+  if (label === '自定义') {
+    customRow.style.display = 'flex';
+    // 初始化日期为今天（如果没填过）
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    if (!document.getElementById('custom-start').value) {
+      document.getElementById('custom-start').value = todayStr;
+    }
+    if (!document.getElementById('custom-end').value) {
+      document.getElementById('custom-end').value = todayStr;
+    }
+  } else {
+    customRow.style.display = 'none';
+  }
+}
+function selectType(el) {
+  document.querySelectorAll('#rg-type .radio-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function applyQuery() {
+  const keyword = document.getElementById('keyword-input').value.toLowerCase();
+  const minDur = parseInt(document.getElementById('min-duration-input').value) || 0;
+  const typeEl = document.querySelector('#rg-type .active');
+  const typeFilter = typeEl ? typeEl.textContent : '全部';
+
+  // 计算标签
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const fmt = d => `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
+
+  if (selectedTime === '今天') {
+    currentLabel = fmt(now);
+  } else if (selectedTime === '本周') {
+    const mon = new Date(now); mon.setDate(now.getDate() - (now.getDay()||7) + 1);
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    currentLabel = `本周（${fmt(mon)}-${fmt(sun)}）`;
+  } else if (selectedTime === '本月') {
+    const first = new Date(now.getFullYear(), now.getMonth(), 1);
+    const last  = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    currentLabel = `本月（${fmt(first)}-${fmt(last)}）`;
+  } else {
+    // 自定义：读取日期 input 的真实值
+    const startVal = document.getElementById('custom-start').value;
+    const endVal   = document.getElementById('custom-end').value;
+    if (!startVal || !endVal) {
+      alert('请选择开始和结束日期');
+      return;
+    }
+    // 转换格式 2026-04-01 → 2026/04/01
+    const fmtCustom = s => s.replace(/-/g, '/');
+    // 校验顺序
+    if (startVal > endVal) {
+      alert('开始日期不能晚于结束日期');
+      return;
+    }
+    currentLabel = `${fmtCustom(startVal)} - ${fmtCustom(endVal)}`;
+  }
+
+  document.getElementById('date-label').textContent = currentLabel;
+  drawWatermark(currentLabel);
+
+  // 过滤
+  currentLogs = allLogs.filter(log => {
+    if (keyword && !log.number.includes(keyword) && !(log.name||'').toLowerCase().includes(keyword)) return false;
+    if (typeFilter === '去电' && log.type !== 'out') return false;
+    if (typeFilter === '来电' && log.type !== 'in') return false;
+    if (typeFilter === '未接' && log.type !== 'miss') return false;
+    return true;
+  });
+
+  renderList(currentLogs);
+  closeDialog('query-overlay');
+}
+
+// ===== 统计弹窗 =====
+function showStatsDialog() {
+  const logs = currentLogs;
+  const total = logs.length;
+  const out = logs.filter(l => l.type === 'out').length;
+  const inc = logs.filter(l => l.type === 'in').length;
+  const miss = logs.filter(l => l.type === 'miss').length;
+
+  const parseDur = s => {
+    if (!s || s === '未接') return 0;
+    let t = 0;
+    const hm = s.match(/(\d+)时/); if(hm) t += parseInt(hm[1])*3600;
+    const mm = s.match(/(\d+)分/); if(mm) t += parseInt(mm[1])*60;
+    const sm = s.match(/(\d+)秒/); if(sm) t += parseInt(sm[1]);
+    return t;
+  };
+  const fmtDur = s => {
+    if (s === 0) return '0秒';
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+    return (h?h+'时':'') + (m?m+'分':'') + (sec?sec+'秒':'0秒');
+  };
+
+  const totalDur = logs.reduce((a,l) => a+parseDur(l.duration), 0);
+  const outDur   = logs.filter(l=>l.type==='out').reduce((a,l) => a+parseDur(l.duration), 0);
+  const incDur   = logs.filter(l=>l.type==='in').reduce((a,l)  => a+parseDur(l.duration), 0);
+
+  document.getElementById('stats-content').innerHTML = `
+    <div style="background:#E3F2FD;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#0D47A1">
+      📅 ${currentLabel}
+    </div>
+    <div class="stats-section-title">📊 通话次数</div>
+    <div class="stats-row stats-highlight"><span class="stats-key">合计</span><span class="stats-value">${total} 次</span></div>
+    <div class="stats-row"><span class="stats-key">去电</span><span class="stats-value" style="color:#1565C0">${out} 次</span></div>
+    <div class="stats-row"><span class="stats-key">来电</span><span class="stats-value" style="color:#2E7D32">${inc} 次</span></div>
+    <div class="stats-row"><span class="stats-key">未接</span><span class="stats-value" style="color:#C62828">${miss} 次</span></div>
+    <div class="stats-section-title" style="margin-top:16px">⏱ 通话时长</div>
+    <div class="stats-row stats-highlight"><span class="stats-key">合计</span><span class="stats-value">${fmtDur(totalDur)}</span></div>
+    <div class="stats-row"><span class="stats-key">去电</span><span class="stats-value">${fmtDur(outDur)}</span></div>
+    <div class="stats-row"><span class="stats-key">来电</span><span class="stats-value">${fmtDur(incDur)}</span></div>
+  `;
+  document.getElementById('stats-overlay').classList.add('show');
+}
+
+// ===== 刷新 =====
+function refreshData() {
+  const btn = document.querySelector('.toolbar-icon');
+  btn.style.transform = 'rotate(360deg)';
+  btn.style.transition = 'transform 0.6s';
+  setTimeout(() => { btn.style.transform = ''; btn.style.transition = ''; }, 700);
+  renderList(currentLogs);
+}
+
+// ===== 初始化 =====
+renderList(allLogs);
+setTimeout(() => drawWatermark(currentLabel), 100);
+window.addEventListener('resize', () => drawWatermark(currentLabel));
+</script>
+</body>
+</html>

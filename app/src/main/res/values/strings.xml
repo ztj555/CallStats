@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">通话统计</string>
+    <string name="permission_rationale">本应用需要读取通话记录权限以统计分析您的通话数据，联系人权限用于显示联系人姓名。所有数据仅在本地处理，不会上传。</string>
+</resources>
