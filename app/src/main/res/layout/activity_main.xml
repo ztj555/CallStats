@@ -15,7 +15,7 @@
         android:clipToPadding="false"
         android:alpha="0.3" />
 
-    <!-- 查询界面的统计卡片（居中，宽度80%，完整内容） -->
+    <!-- 查询界面的统计卡片（居中，宽度75%，完整内容） -->
     <ScrollView
         android:id="@+id/scrollCompact"
         android:layout_width="match_parent"
@@ -29,8 +29,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginHorizontal="32dp"
-            android:layout_marginVertical="48dp"
+            android:layout_marginHorizontal="40dp"
+            android:layout_marginVertical="24dp"
             app:cardCornerRadius="8dp"
             app:cardElevation="8dp"
             app:cardBackgroundColor="#FFFFFF">
