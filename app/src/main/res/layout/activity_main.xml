@@ -262,7 +262,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:background="#B8860B"
+        android:background="@color/primary"
         android:gravity="center_vertical"
         android:paddingTop="8dp"
         android:paddingBottom="8dp"
