@@ -212,7 +212,20 @@ class MainActivity : AppCompatActivity() {
         binding.rvCallLogs.visibility = View.GONE
         binding.rvCallLogs.alpha = 1.0f // 恢复正常透明度
         binding.layoutFooter.visibility = View.VISIBLE // 显示底部信息
-        enableNicknameInput() // 启用昵称输入
+
+        // 处理昵称显示逻辑
+        val savedNickname = prefs.getString("user_nickname", "") ?: ""
+        if (savedNickname.isNotEmpty()) {
+            binding.tvNickname.text = savedNickname
+            binding.tvNickname.visibility = View.VISIBLE
+            binding.etNickname.visibility = View.GONE
+            disableNicknameInput()
+        } else {
+            binding.tvNickname.visibility = View.GONE
+            binding.etNickname.visibility = View.VISIBLE
+            binding.etNickname.setText("") // 清空残留内容
+            enableNicknameInput()
+        }
     }
 
     // 切换到通话记录界面（只显示通话记录，无统计板块）
