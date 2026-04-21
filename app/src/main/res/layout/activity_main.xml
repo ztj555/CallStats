@@ -257,12 +257,12 @@
         android:visibility="gone"
         app:backgroundTint="@color/primary" />
 
-    <!-- 顶层标题栏（蓝色，所有界面共享） -->
+    <!-- 顶层标题栏（暗金色，所有界面共享） -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:background="@color/primary"
+        android:background="#B8860B"
         android:gravity="center_vertical"
         android:paddingTop="8dp"
         android:paddingBottom="8dp"

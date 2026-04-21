@@ -9,6 +9,6 @@
     <color name="white">#FFFFFFFF</color>
     <color name="watermark_color">#80000000</color>
     <color name="card_background">#FFF5F5F5</color>
-    <color name="primary">#FFB8860B</color>
-    <color name="primary_dark">#FF8B6914</color>
+    <color name="primary">#FF2196F3</color>
+    <color name="primary_dark">#FF1976D2</color>
 </resources>
