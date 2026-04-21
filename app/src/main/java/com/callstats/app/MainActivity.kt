@@ -451,12 +451,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun formatDuration(seconds: Int): String {
-        val hours = seconds / 3600
-        val minutes = (seconds % 3600) / 60
+        val minutes = seconds / 60
         val secs = seconds % 60
 
         return when {
-            hours > 0 -> String.format("%d小时%d分%d秒", hours, minutes, secs)
             minutes > 0 -> String.format("%d分%d秒", minutes, secs)
             else -> String.format("%d秒", secs)
         }

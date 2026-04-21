@@ -41,7 +41,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:textSize="14sp"
+                android:textSize="16sp"
                 android:textColor="@color/primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="12dp" />
@@ -51,7 +51,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="汇总"
-                android:textSize="16sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp" />
 
@@ -72,14 +72,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/total_calls"
-                        android:textSize="11sp" />
+                        android:textSize="13sp" />
 
                     <TextView
                         android:id="@+id/tvCompactTotalCalls"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0"
-                        android:textSize="20sp"
+                        android:textSize="26sp"
                         android:textStyle="bold"
                         android:textColor="@color/primary" />
                 </LinearLayout>
@@ -95,14 +95,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/total_duration"
-                        android:textSize="11sp" />
+                        android:textSize="13sp" />
 
                     <TextView
                         android:id="@+id/tvCompactTotalDuration"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0"
-                        android:textSize="20sp"
+                        android:textSize="26sp"
                         android:textStyle="bold"
                         android:textColor="@color/primary" />
                 </LinearLayout>
@@ -131,14 +131,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/incoming_calls"
-                        android:textSize="12sp" />
+                        android:textSize="14sp" />
 
                     <TextView
                         android:id="@+id/tvCompactIncomingCalls"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0 次"
-                        android:textSize="16sp"
+                        android:textSize="20sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
@@ -152,14 +152,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/incoming_duration"
-                        android:textSize="12sp" />
+                        android:textSize="14sp" />
 
                     <TextView
                         android:id="@+id/tvCompactIncomingDuration"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0"
-                        android:textSize="16sp"
+                        android:textSize="20sp"
                         android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
@@ -181,14 +181,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/outgoing_calls"
-                        android:textSize="12sp" />
+                        android:textSize="14sp" />
 
                     <TextView
                         android:id="@+id/tvCompactOutgoingCalls"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0 次"
-                        android:textSize="16sp"
+                        android:textSize="20sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
@@ -202,14 +202,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/outgoing_duration"
-                        android:textSize="12sp" />
+                        android:textSize="14sp" />
 
                     <TextView
                         android:id="@+id/tvCompactOutgoingDuration"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0"
-                        android:textSize="16sp"
+                        android:textSize="20sp"
                         android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
@@ -230,14 +230,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/missed_calls"
-                        android:textSize="12sp" />
+                        android:textSize="14sp" />
 
                     <TextView
                         android:id="@+id/tvCompactMissedCalls"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0 次"
-                        android:textSize="16sp"
+                        android:textSize="20sp"
                         android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
