@@ -75,12 +75,25 @@ class MainActivity : AppCompatActivity() {
         } else {
             binding.tvNickname.visibility = View.GONE
             binding.etNickname.visibility = View.VISIBLE
-            binding.etNickname.hint = "点击输入昵称"
+            // 不覆盖 XML 中设置的 hint
+        }
+
+        // 昵称输入框容器 - 点击切换到编辑模式（解决禁用状态无法点击的问题）
+        binding.tilNickname.setOnClickListener {
+            if (binding.etNickname.visibility != View.VISIBLE || binding.etNickname.isEnabled != true) {
+                binding.tvNickname.visibility = View.GONE
+                binding.etNickname.visibility = View.VISIBLE
+                enableNicknameInput()
+                binding.etNickname.requestFocus()
+                binding.etNickname.setSelection(binding.etNickname.text?.length ?: 0)
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.showSoftInput(binding.etNickname, InputMethodManager.SHOW_IMPLICIT)
+            }
         }
 
         // 昵称输入框 - 点击切换到编辑模式
         binding.etNickname.setOnClickListener {
-            binding.etNickname.isEnabled = true
+            enableNicknameInput()
             binding.etNickname.requestFocus()
             binding.etNickname.setSelection(binding.etNickname.text?.length ?: 0)
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -101,7 +114,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvNickname.setOnClickListener {
             binding.tvNickname.visibility = View.GONE
             binding.etNickname.visibility = View.VISIBLE
-            binding.etNickname.isEnabled = true
+            enableNicknameInput()
             binding.etNickname.requestFocus()
             binding.etNickname.setSelection(binding.etNickname.text?.length ?: 0)
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
