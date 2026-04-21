@@ -11,7 +11,7 @@
         android:id="@+id/rvCallLogs"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="130dp"
+        android:layout_marginTop="84dp"
         android:padding="16dp"
         android:clipToPadding="false"
         android:alpha="0.3" />
@@ -22,7 +22,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_marginTop="130dp"
+        android:layout_marginTop="84dp"
         android:layout_marginHorizontal="40dp"
         android:visibility="gone"
         app:cardCornerRadius="8dp"
@@ -257,82 +257,89 @@
         android:visibility="gone"
         app:backgroundTint="@color/primary" />
 
-    <!-- 顶层标题栏（所有界面共享） -->
+    <!-- 顶层标题栏（蓝色，所有界面共享） -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="#F5F5F5"
-        android:padding="16dp">
+        android:orientation="horizontal"
+        android:background="@color/primary"
+        android:gravity="center_vertical"
+        android:paddingTop="32dp"
+        android:paddingBottom="12dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
 
-        <!-- 标题（可点击进入通话记录界面） -->
+        <!-- 标题文字（可点击进入通话记录界面） -->
         <TextView
             android:id="@+id/tvTitle"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center"
             android:text="@string/app_name"
-            android:textSize="24sp"
+            android:textSize="20sp"
             android:textStyle="bold"
+            android:textColor="#FFFFFF"
             android:clickable="true"
             android:focusable="true"
             android:background="?attr/selectableItemBackground"
-            android:padding="8dp"
-            android:layout_marginBottom="8dp" />
+            android:paddingEnd="12dp" />
 
-        <!-- 昵称输入区域 -->
-        <LinearLayout
-            android:layout_width="match_parent"
+        <!-- 分隔线 -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="20dp"
+            android:background="#80FFFFFF"
+            android:layout_marginEnd="12dp" />
+
+        <!-- 昵称标签 -->
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:text="昵称："
+            android:textSize="14sp"
+            android:textColor="#CCFFFFFF" />
 
-            <TextView
-                android:layout_width="wrap_content"
+        <!-- 昵称输入框（编辑时显示） -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilNickname"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            app:boxStrokeColor="#80FFFFFF"
+            app:boxCornerRadiusBottomEnd="16dp"
+            app:boxCornerRadiusBottomStart="16dp"
+            app:boxCornerRadiusTopEnd="16dp"
+            app:boxCornerRadiusTopStart="16dp"
+            app:hintEnabled="false">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etNickname"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="昵称："
+                android:hint="点击输入昵称"
                 android:textSize="14sp"
-                android:textColor="#666666" />
+                android:textColor="#FFFFFF"
+                android:textColorHint="#99FFFFFF"
+                android:maxLines="1"
+                android:imeOptions="actionDone"
+                android:inputType="text"
+                android:background="@android:color/transparent" />
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilNickname"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                app:boxCornerRadiusBottomEnd="16dp"
-                app:boxCornerRadiusBottomStart="16dp"
-                app:boxCornerRadiusTopEnd="16dp"
-                app:boxCornerRadiusTopStart="16dp"
-                app:hintEnabled="false">
+        </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etNickname"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="点击输入昵称"
-                    android:textSize="14sp"
-                    android:maxLines="1"
-                    android:imeOptions="actionDone"
-                    android:inputType="text" />
-
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- 显示昵称的TextView（编辑完成后显示） -->
-            <TextView
-                android:id="@+id/tvNickname"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:textSize="14sp"
-                android:textColor="@color/primary"
-                android:textStyle="bold"
-                android:visibility="gone"
-                android:gravity="center_vertical" />
-
-        </LinearLayout>
+        <!-- 显示昵称的TextView（保存后显示） -->
+        <TextView
+            android:id="@+id/tvNickname"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:visibility="gone"
+            android:gravity="center_vertical" />
 
     </LinearLayout>
 
@@ -341,7 +348,7 @@
         android:id="@+id/scrollStandard"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="130dp"
+        android:layout_marginTop="84dp"
         android:fillViewport="true"
         android:visibility="visible">
 
