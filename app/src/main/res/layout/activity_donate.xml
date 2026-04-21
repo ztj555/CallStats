@@ -1,108 +1,152 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center_horizontal"
-    android:padding="24dp"
+    android:fillViewport="true"
     android:background="@android:color/white">
 
-    <!-- 标题 -->
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="感谢您的支持"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="@color/primary"
-        android:layout_marginTop="32dp"
-        android:layout_marginBottom="8dp" />
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:padding="24dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="您的打赏是我继续开发的动力"
-        android:textSize="14sp"
-        android:textColor="#666666"
-        android:layout_marginBottom="40dp" />
+        <!-- 标题 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="感谢您的支持"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp" />
 
-    <!-- 收款二维码卡片 -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="280dp"
-        android:layout_height="wrap_content"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="8dp"
-        android:layout_marginBottom="32dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="您的打赏是我继续开发的动力"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="24dp" />
 
+        <!-- 一键打赏按钮组 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="20dp"
-            android:gravity="center">
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="24dp">
 
-            <!-- 微信收款码 -->
-            <ImageView
-                android:id="@+id/ivWechatPay"
-                android:layout_width="240dp"
-                android:layout_height="320dp"
-                android:scaleType="fitCenter"
-                android:src="@drawable/wechat_pay"
-                android:layout_marginBottom="16dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnWechatDonate"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="微信收款码"
-                android:textSize="16sp"
-                android:textColor="@color/primary"
-                android:textStyle="bold"
-                android:layout_marginBottom="16dp" />
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="微信打赏"
+                android:backgroundTint="#07C160" />
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="#E0E0E0"
-                android:layout_marginBottom="16dp" />
-
-            <!-- 支付宝收款码 -->
-            <ImageView
-                android:id="@+id/ivAlipay"
-                android:layout_width="240dp"
-                android:layout_height="320dp"
-                android:scaleType="fitCenter"
-                android:src="@drawable/alipay"
-                android:layout_marginBottom="16dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAlipayDonate"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="支付宝收款码"
-                android:textSize="16sp"
-                android:textColor="@color/primary"
-                android:textStyle="bold" />
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="支付宝打赏"
+                android:backgroundTint="#1677FF" />
 
         </LinearLayout>
 
-    </com.google.android.material.card.MaterialCardView>
+        <!-- 分割线 -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E0E0E0"
+            android:layout_marginBottom="24dp" />
 
-    <!-- 提示文字 -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="长按识别二维码进行打赏"
-        android:textSize="12sp"
-        android:textColor="#888888"
-        android:layout_marginBottom="24dp" />
+        <!-- 微信收款码 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="微信收款码"
+            android:textSize="16sp"
+            android:textColor="@color/primary"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
 
-    <!-- 关闭按钮 -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnClose"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="关闭"
-        app:strokeColor="@color/primary" />
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            android:layout_marginBottom="24dp">
 
-</LinearLayout>
+            <ImageView
+                android:id="@+id/ivWechatPay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:src="@drawable/wechat_pay"
+                android:padding="8dp" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="长按保存图片，用微信扫一扫"
+            android:textSize="12sp"
+            android:textColor="#888888"
+            android:layout_marginBottom="24dp" />
+
+        <!-- 支付宝收款码 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="支付宝收款码"
+            android:textSize="16sp"
+            android:textColor="@color/primary"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            android:layout_marginBottom="24dp">
+
+            <ImageView
+                android:id="@+id/ivAlipay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:src="@drawable/alipay"
+                android:padding="8dp" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="长按保存图片，用支付宝扫一扫"
+            android:textSize="12sp"
+            android:textColor="#888888"
+            android:layout_marginBottom="24dp" />
+
+        <!-- 关闭按钮 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnClose"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="关闭"
+            app:strokeColor="@color/primary" />
+
+    </LinearLayout>
+</ScrollView>
