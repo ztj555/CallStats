@@ -710,4 +710,33 @@
         </LinearLayout>
     </ScrollView>
 
+    <!-- 底部信息（仅标准界面显示） -->
+    <LinearLayout
+        android:id="@+id/layoutFooter"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:background="@android:color/white">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="本软件由大左个人提供，祝你发大财。\n意见反馈邮箱：1051702771@qq.com"
+            android:textSize="12sp"
+            android:textColor="#888888" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDonate"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="打赏"
+            android:textColor="@color/primary" />
+
+    </LinearLayout>
+
 </FrameLayout>

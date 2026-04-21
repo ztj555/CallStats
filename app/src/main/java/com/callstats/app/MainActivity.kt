@@ -3,6 +3,7 @@ package com.callstats.app
 import android.Manifest
 import android.app.DatePickerDialog
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.database.Cursor
@@ -148,6 +149,11 @@ class MainActivity : AppCompatActivity() {
         binding.btnStartDate.setOnClickListener { showDatePicker(true) }
         binding.btnEndDate.setOnClickListener { showDatePicker(false) }
 
+        // 打赏按钮
+        binding.btnDonate.setOnClickListener {
+            startActivity(Intent(this, DonateActivity::class.java))
+        }
+
         // 标准界面查询按钮 - 切换到查询界面
         binding.btnQuery.setOnClickListener {
             queryCallStats()
@@ -179,6 +185,7 @@ class MainActivity : AppCompatActivity() {
         binding.cardCompactResults.visibility = View.VISIBLE
         binding.rvCallLogs.visibility = View.VISIBLE
         binding.rvCallLogs.alpha = 0.3f // 查询界面背景半透明
+        binding.layoutFooter.visibility = View.GONE // 隐藏底部信息
     }
 
     // 切换到标准界面
@@ -190,6 +197,7 @@ class MainActivity : AppCompatActivity() {
         binding.cardCompactResults.visibility = View.GONE
         binding.rvCallLogs.visibility = View.GONE
         binding.rvCallLogs.alpha = 1.0f // 恢复正常透明度
+        binding.layoutFooter.visibility = View.VISIBLE // 显示底部信息
     }
 
     // 切换到通话记录界面（只显示通话记录，无统计板块）
@@ -200,6 +208,7 @@ class MainActivity : AppCompatActivity() {
         binding.cardCompactResults.visibility = View.GONE
         binding.rvCallLogs.visibility = View.VISIBLE
         binding.rvCallLogs.alpha = 1.0f // 通话记录界面显示完整透明度
+        binding.layoutFooter.visibility = View.GONE // 隐藏底部信息
     }
 
     // 当天：今天到今天
