@@ -186,6 +186,7 @@ class MainActivity : AppCompatActivity() {
         binding.rvCallLogs.visibility = View.VISIBLE
         binding.rvCallLogs.alpha = 0.3f // 查询界面背景半透明
         binding.layoutFooter.visibility = View.GONE // 隐藏底部信息
+        disableNicknameInput() // 禁用昵称输入
     }
 
     // 切换到标准界面
@@ -198,6 +199,7 @@ class MainActivity : AppCompatActivity() {
         binding.rvCallLogs.visibility = View.GONE
         binding.rvCallLogs.alpha = 1.0f // 恢复正常透明度
         binding.layoutFooter.visibility = View.VISIBLE // 显示底部信息
+        enableNicknameInput() // 启用昵称输入
     }
 
     // 切换到通话记录界面（只显示通话记录，无统计板块）
@@ -209,6 +211,21 @@ class MainActivity : AppCompatActivity() {
         binding.rvCallLogs.visibility = View.VISIBLE
         binding.rvCallLogs.alpha = 1.0f // 通话记录界面显示完整透明度
         binding.layoutFooter.visibility = View.GONE // 隐藏底部信息
+        disableNicknameInput() // 禁用昵称输入
+    }
+
+    // 禁用昵称输入
+    private fun disableNicknameInput() {
+        binding.etNickname.isEnabled = false
+        binding.etNickname.isFocusable = false
+        binding.etNickname.isClickable = false
+    }
+
+    // 启用昵称输入
+    private fun enableNicknameInput() {
+        binding.etNickname.isEnabled = true
+        binding.etNickname.isFocusable = true
+        binding.etNickname.isClickable = true
     }
 
     // 当天：今天到今天

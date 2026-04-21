@@ -251,10 +251,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="top|end"
-        android:layout_marginTop="88dp"
+        android:layout_marginTop="120dp"
         android:layout_marginEnd="16dp"
         android:src="@android:drawable/ic_menu_search"
-        app:fabSize="mini"
+        app:fabSize="normal"
         android:visibility="gone"
         app:backgroundTint="@color/primary" />
 
