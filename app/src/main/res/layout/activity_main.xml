@@ -409,6 +409,13 @@
                             android:text="一周" />
 
                         <com.google.android.material.chip.Chip
+                            android:id="@+id/btnMonth"
+                            style="@style/Widget.MaterialComponents.Chip.Choice"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="本月" />
+
+                        <com.google.android.material.chip.Chip
                             android:id="@+id/btnCustom"
                             style="@style/Widget.MaterialComponents.Chip.Choice"
                             android:layout_width="wrap_content"

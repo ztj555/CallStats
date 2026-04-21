@@ -141,6 +141,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnToday.setOnClickListener { setToday() }
         binding.btnYesterday.setOnClickListener { setYesterday() }
         binding.btnWeek.setOnClickListener { setWeek() }
+        binding.btnMonth.setOnClickListener { setMonth() }
         binding.btnCustom.setOnClickListener { showCustomPicker() }
 
         // 日期选择按钮
@@ -233,9 +234,25 @@ class MainActivity : AppCompatActivity() {
         queryCallStats()
     }
 
+    // 本月：当前月份1号到当天
+    private fun setMonth() {
+        val calendar = Calendar.getInstance()
+        endDate = calendar.timeInMillis
+        // 设为当月1号
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        startDate = calendar.timeInMillis
+        updateDateButtons()
+        updateButtonStates(3)
+        queryCallStats()
+    }
+
     // 自定义：显示日期选择器
     private fun showCustomPicker() {
-        updateButtonStates(3)
+        updateButtonStates(4)
         showDatePicker(true)
     }
 
@@ -244,7 +261,8 @@ class MainActivity : AppCompatActivity() {
         binding.btnToday.isChecked = selected == 0
         binding.btnYesterday.isChecked = selected == 1
         binding.btnWeek.isChecked = selected == 2
-        binding.btnCustom.isChecked = selected == 3
+        binding.btnMonth.isChecked = selected == 3
+        binding.btnCustom.isChecked = selected == 4
     }
 
     private fun setDefaultDates() {
