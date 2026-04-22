@@ -19,7 +19,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.widget.addTextChangedListener
+
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.callstats.app.databinding.ActivityMainBinding
@@ -34,7 +34,6 @@ class MainActivity : AppCompatActivity() {
     private var timeRangeText: String = ""
     private var isCompactMode = true // 默认显示查询界面
     private var isCallLogMode = false // 通话记录界面
-    private var isEditingNickname = false // 是否正在编辑昵称
 
     private lateinit var prefs: SharedPreferences
 
@@ -68,12 +67,8 @@ class MainActivity : AppCompatActivity() {
     // 初始化昵称显示
     private fun initNickname() {
         val savedNickname = prefs.getString("user_nickname", "") ?: ""
-        // 始终用 etNickname 展示，有昵称就回填，没有就显示 hint
         binding.etNickname.setText(savedNickname)
-        binding.tvNickname.visibility = View.GONE
-        binding.etNickname.visibility = View.VISIBLE
 
-        // 昵称输入完成（按回车/完成键）
         binding.etNickname.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
                 saveNickname()
@@ -83,11 +78,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 输入框失去焦点时自动保存
         binding.etNickname.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
-                saveNickname()
-            }
+            if (!hasFocus) saveNickname()
         }
     }
 
@@ -99,11 +91,6 @@ class MainActivity : AppCompatActivity() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(binding.etNickname.windowToken, 0)
         binding.etNickname.clearFocus()
-    }
-
-    // 获取昵称（供其他界面显示）
-    private fun getNickname(): String {
-        return prefs.getString("user_nickname", "") ?: ""
     }
 
     private fun initViews() {
@@ -153,9 +140,9 @@ class MainActivity : AppCompatActivity() {
         binding.fabQuery.visibility = View.VISIBLE
         binding.cardCompactResults.visibility = View.VISIBLE
         binding.rvCallLogs.visibility = View.VISIBLE
-        binding.rvCallLogs.alpha = 0.3f // 查询界面背景半透明
-        binding.layoutFooter.visibility = View.GONE // 隐藏底部信息
-        disableNicknameInput() // 禁用昵称输入
+        binding.rvCallLogs.alpha = 0.3f
+        binding.layoutFooter.visibility = View.GONE
+        disableNicknameInput()
     }
 
     // 切换到标准界面
@@ -168,23 +155,20 @@ class MainActivity : AppCompatActivity() {
         binding.rvCallLogs.visibility = View.GONE
         binding.rvCallLogs.alpha = 1.0f
         binding.layoutFooter.visibility = View.VISIBLE
-
-        // 回填已保存的昵称并启用输入
-        val savedNickname = prefs.getString("user_nickname", "") ?: ""
-        binding.etNickname.setText(savedNickname)
+        binding.etNickname.setText(prefs.getString("user_nickname", "") ?: "")
         enableNicknameInput()
     }
 
-    // 切换到通话记录界面（只显示通话记录，无统计板块）
+    // 切换到通话记录界面
     private fun switchToCallLogMode() {
         isCallLogMode = true
         binding.scrollStandard.visibility = View.GONE
         binding.fabQuery.visibility = View.VISIBLE
         binding.cardCompactResults.visibility = View.GONE
         binding.rvCallLogs.visibility = View.VISIBLE
-        binding.rvCallLogs.alpha = 1.0f // 通话记录界面显示完整透明度
-        binding.layoutFooter.visibility = View.GONE // 隐藏底部信息
-        disableNicknameInput() // 禁用昵称输入
+        binding.rvCallLogs.alpha = 1.0f
+        binding.layoutFooter.visibility = View.GONE
+        disableNicknameInput()
     }
 
     // 禁用昵称输入（非标准界面，不可编辑但视觉不变灰）
@@ -263,13 +247,6 @@ class MainActivity : AppCompatActivity() {
         binding.btnWeek.isChecked = selected == 2
         binding.btnMonth.isChecked = selected == 3
         binding.btnCustom.isChecked = selected == 4
-    }
-
-    private fun setDefaultDates() {
-        val calendar = Calendar.getInstance()
-        endDate = calendar.timeInMillis
-        startDate = calendar.timeInMillis
-        updateDateButtons()
     }
 
     private fun updateDateButtons() {
@@ -498,11 +475,11 @@ class MainActivity : AppCompatActivity() {
         val time: String
     )
 
-    // RecyclerView适配器
-    inner class CallLogAdapter(private val list: List<CallLogItem>) :
+    // 通话记录适配器
+    class CallLogAdapter(private val list: List<CallLogItem>) :
         RecyclerView.Adapter<CallLogAdapter.ViewHolder>() {
 
-        inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             val tvNumber: TextView = itemView.findViewById(R.id.tvNumber)
             val tvType: TextView = itemView.findViewById(R.id.tvType)
             val tvDuration: TextView = itemView.findViewById(R.id.tvDuration)
