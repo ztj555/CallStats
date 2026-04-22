@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.os.Bundle
 import android.provider.CallLog
+import android.provider.ContactsContract
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -280,13 +281,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkPermission() {
+        val permissions = mutableListOf<String>()
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG)
             != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.READ_CALL_LOG),
-                REQUEST_READ_CALL_LOG
-            )
+            permissions.add(Manifest.permission.READ_CALL_LOG)
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)
+            != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(Manifest.permission.READ_CONTACTS)
+        }
+        if (permissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissions.toTypedArray(), REQUEST_PERMISSIONS)
         }
     }
 
@@ -296,8 +301,9 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_READ_CALL_LOG) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        if (requestCode == REQUEST_PERMISSIONS) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG)
+                == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(this, "权限已授予", Toast.LENGTH_SHORT).show()
                 queryCallStats()
             } else {
@@ -394,13 +400,13 @@ class MainActivity : AppCompatActivity() {
             val dateIndex = it.getColumnIndex(CallLog.Calls.DATE)
 
             while (it.moveToNext()) {
-                val number = it.getString(numberIndex) ?: "未知"
+                val number = it.getString(numberIndex) ?: ""
                 val type = it.getInt(typeIndex)
                 val duration = it.getInt(durationIndex)
                 val date = it.getLong(dateIndex)
                 val dateObj = Date(date)
 
-                // 添加到列表用于显示
+                val contactName = getContactName(number)
                 val typeText = when (type) {
                     CallLog.Calls.INCOMING_TYPE -> "来电"
                     CallLog.Calls.OUTGOING_TYPE -> "去电"
@@ -410,6 +416,7 @@ class MainActivity : AppCompatActivity() {
                 val weekdayText = weekdayFormat.format(dateObj)
                 val timeText = timeFormat.format(dateObj)
                 callLogList.add(CallLogItem(
+                    contactName,
                     number,
                     typeText,
                     formatDuration(duration),
@@ -455,6 +462,30 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // 根据电话号码查询联系人备注/姓名
+    private fun getContactName(phoneNumber: String): String {
+        if (phoneNumber.isBlank()) return ""
+        try {
+            val uri = android.net.Uri.withAppendedPath(
+                ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+                android.net.Uri.encode(phoneNumber)
+            )
+            contentResolver.query(
+                uri,
+                arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
+                null, null, null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME)
+                    if (nameIndex >= 0) {
+                        return cursor.getString(nameIndex) ?: ""
+                    }
+                }
+            }
+        } catch (_: Exception) { }
+        return ""
+    }
+
     data class CallStats(
         var totalCalls: Int = 0,
         var totalDuration: Int = 0,
@@ -467,6 +498,7 @@ class MainActivity : AppCompatActivity() {
 
     // 通话记录数据类
     data class CallLogItem(
+        val name: String,
         val number: String,
         val type: String,
         val duration: String,
@@ -480,6 +512,7 @@ class MainActivity : AppCompatActivity() {
         RecyclerView.Adapter<CallLogAdapter.ViewHolder>() {
 
         class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            val tvName: TextView = itemView.findViewById(R.id.tvName)
             val tvNumber: TextView = itemView.findViewById(R.id.tvNumber)
             val tvType: TextView = itemView.findViewById(R.id.tvType)
             val tvDuration: TextView = itemView.findViewById(R.id.tvDuration)
@@ -496,7 +529,8 @@ class MainActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val item = list[position]
-            holder.tvNumber.text = item.number
+            holder.tvName.text = item.name.ifBlank { item.number }
+            holder.tvNumber.text = if (item.name.isNotBlank()) item.number else ""
             holder.tvType.text = item.type
             holder.tvDuration.text = item.duration
             holder.tvDate.text = item.date
@@ -516,6 +550,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val REQUEST_READ_CALL_LOG = 1001
+        private const val REQUEST_PERMISSIONS = 1001
     }
 }

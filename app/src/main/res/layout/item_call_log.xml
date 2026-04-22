@@ -14,12 +14,22 @@
         android:orientation="vertical">
 
         <TextView
+            android:id="@+id/tvName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="联系人姓名"
+            android:textSize="16sp"
+            android:textColor="#333333"
+            android:textStyle="bold" />
+
+        <TextView
             android:id="@+id/tvNumber"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="13800138000"
-            android:textSize="16sp"
-            android:textColor="#333333" />
+            android:textSize="13sp"
+            android:textColor="#888888"
+            android:layout_marginTop="2dp" />
 
         <LinearLayout
             android:layout_width="wrap_content"
