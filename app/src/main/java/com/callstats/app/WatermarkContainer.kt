@@ -82,8 +82,8 @@ class WatermarkContainer @JvmOverloads constructor(
             cachedBitmap?.recycle()
             cachedBitmap = null
             cachedText = ""
-            // 重绘所有子View
-            invalidateAll()
+            // P26: 重绘 FrameLayout 本身
+            invalidate()
             return
         }
 
@@ -141,8 +141,8 @@ class WatermarkContainer @JvmOverloads constructor(
             cachedBitmap = bitmap
             cachedText = watermarkText
 
-            // 重绘所有子View
-            invalidateAll()
+            // P26: 重绘 FrameLayout 本身
+            invalidate()
 
         } catch (e: OutOfMemoryError) {
             // 内存不足时降级处理

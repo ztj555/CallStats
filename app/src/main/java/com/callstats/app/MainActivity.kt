@@ -670,7 +670,8 @@ class MainActivity : AppCompatActivity() {
     )
 
     // 通话记录适配器 - 使用 ListAdapter + DiffUtil 增量更新
-    class CallLogAdapter : RecyclerView.Adapter<CallLogAdapter.ViewHolder>() {
+    // P26: 添加 inner 关键字，使其能访问外部类 MainActivity 的方法
+    inner class CallLogAdapter : RecyclerView.Adapter<CallLogAdapter.ViewHolder>() {
 
         // DiffUtil.ItemCallback：精确判断哪些 item 变了
         class DiffCallback : DiffUtil.ItemCallback<CallLogItem>() {
