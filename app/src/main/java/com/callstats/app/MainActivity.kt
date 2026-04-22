@@ -211,8 +211,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun initRecyclerView() {
         binding.rvCallLogs.layoutManager = LinearLayoutManager(this)
-        // P5: 使用 ListAdapter，由 adapter 内部管理数据
-        binding.rvCallLogs.adapter = CallLogAdapter()
+        // P26: 使用 CallLogAdapter，传入联系人查询 lambda
+        binding.rvCallLogs.adapter = CallLogAdapter(
+            getContactNameFunc = { number -> getContactName(number) },
+            preloadContactNameFunc = { number -> preloadContactName(number) }
+        )
         // P13: 设置固定高度，RecyclerView 不需要每次都重新计算
         binding.rvCallLogs.setHasFixedSize(true)
         // P13: 预取数量，提升滚动流畅度
@@ -669,14 +672,16 @@ class MainActivity : AppCompatActivity() {
         val time: String
     )
 
-    // 通话记录适配器 - 使用 ListAdapter + DiffUtil 增量更新
-    // P26: 添加 inner 关键字，使其能访问外部类 MainActivity 的方法
-    inner class CallLogAdapter : RecyclerView.Adapter<CallLogAdapter.ViewHolder>() {
+    // P26: 通话记录适配器 - 使用 ListAdapter + DiffUtil 增量更新
+    // 改为独立类，通过构造方法传入联系人查询回调
+    class CallLogAdapter(
+        private val getContactNameFunc: (String) -> String,
+        private val preloadContactNameFunc: (String) -> Unit
+    ) : RecyclerView.Adapter<CallLogAdapter.ViewHolder>() {
 
         // DiffUtil.ItemCallback：精确判断哪些 item 变了
-        class DiffCallback : DiffUtil.ItemCallback<CallLogItem>() {
+        private object DiffCallback : DiffUtil.ItemCallback<CallLogItem>() {
             override fun areItemsTheSame(oldItem: CallLogItem, newItem: CallLogItem): Boolean {
-                // 用日期+时间+号码作为唯一标识
                 return oldItem.date == newItem.date &&
                        oldItem.time == newItem.time &&
                        oldItem.number == newItem.number
@@ -687,7 +692,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // P5: 使用 ListAdapter + AsyncListDiffer，支持异步 Diff 计算
-        private val differ = AsyncListDiffer(this, DiffCallback())
+        private val differ = AsyncListDiffer(this, DiffCallback)
 
         fun submitList(newList: List<CallLogItem>) {
             differ.submitList(newList)
@@ -703,8 +708,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val item = differ.currentList[position]
-            // P9: 直接显示号码，后台异步预加载联系人姓名
-            val contactName = getContactName(item.number)
+            val contactName = getContactNameFunc(item.number)
             holder.tvName.text = contactName.ifBlank { item.number }
             holder.tvNumber.text = if (contactName.isNotBlank()) item.number else ""
             holder.tvType.text = item.type
@@ -712,9 +716,9 @@ class MainActivity : AppCompatActivity() {
             holder.tvDate.text = item.date
             holder.tvWeekday.text = " ${item.weekday}"
             holder.tvTime.text = item.time
-            // P9: 只在缓存未命中时预加载
+            // 只在缓存未命中时预加载
             if (contactName.isBlank()) {
-                preloadContactName(item.number)
+                preloadContactNameFunc(item.number)
             }
         }
 
