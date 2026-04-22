@@ -66,6 +66,10 @@ class MainActivity : AppCompatActivity() {
     // P6: 防抖机制 - 防止快速连续点击
     private var lastQueryTime = 0L
     private val QUERY_DEBOUNCE_MS = 300L  // 300ms 防抖阈值
+    // 云端同步管理器
+    private lateinit var cloudSyncManager: CloudSyncManager
+    // 当前统计数据（用于同步）
+    private var currentStats: CallStats? = null
     // P24: 定期刷新 Runnable，避免匿名对象创建
     private val refreshContactsRunnable = object : Runnable {
         override fun run() {
@@ -81,6 +85,10 @@ class MainActivity : AppCompatActivity() {
 
         // 初始化SharedPreferences
         prefs = getSharedPreferences("callstats_prefs", Context.MODE_PRIVATE)
+
+        // 初始化云端同步管理器
+        cloudSyncManager = CloudSyncManager(this)
+        initCloudSyncUI()
 
         initViews()
         initNickname()
@@ -173,6 +181,90 @@ class MainActivity : AppCompatActivity() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(binding.etNickname.windowToken, 0)
         binding.etNickname.clearFocus()
+        // 更新云端显示的用户名
+        updateCloudSyncUI()
+    }
+
+    // 初始化云端同步UI
+    private fun initCloudSyncUI() {
+        updateCloudSyncUI()
+    }
+
+    // 更新云端同步UI
+    private fun updateCloudSyncUI() {
+        binding.tvCurrentUser.text = cloudSyncManager.getUserDisplayName()
+        binding.tvLastSync.text = "上次: ${cloudSyncManager.formatLastSyncTime()}"
+    }
+
+    // 同步数据到云端
+    private fun syncToCloud() {
+        val stats = currentStats
+        if (stats == null) {
+            Toast.makeText(this, "请先查询统计数据", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        binding.btnSync.isEnabled = false
+        binding.btnSync.text = "同步中..."
+
+        lifecycleScope.launch {
+            cloudSyncManager.syncStats(stats) { result ->
+                binding.btnSync.isEnabled = true
+                binding.btnSync.text = "同步数据"
+
+                if (result.success) {
+                    cloudSyncManager.saveSyncTime(System.currentTimeMillis())
+                    updateCloudSyncUI()
+                    Toast.makeText(this@MainActivity, "同步成功！${result.message}", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this@MainActivity, "同步失败: ${result.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    // 查看云端数据
+    private fun viewCloudData() {
+        // 弹出选择框选择平台
+        val platforms = arrayOf("GitHub (国际)", "Gitee (国内)")
+        val urls = arrayOf(
+            "https://ztj555.github.io/tonghuashuju/",
+            "https://gitee.com/zuo-tingjun/tonghuashuju"
+        )
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("选择平台查看")
+            .setItems(platforms) { _, which ->
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(urls[which]))
+                startActivity(intent)
+            }
+            .show()
+    }
+
+    // Token 配置对话框
+    private fun showTokenConfigDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_token_config, null)
+        val etGithubToken = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etGithubToken)
+        val etGiteeToken = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etGiteeToken)
+
+        // 加载已保存的 Token
+        etGithubToken.setText(prefs.getString("github_token", "") ?: "")
+        etGiteeToken.setText(prefs.getString("gitee_token", "") ?: "")
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("配置云端 Token")
+            .setView(dialogView)
+            .setPositiveButton("保存") { _, _ ->
+                val githubToken = etGithubToken.text?.toString()?.trim() ?: ""
+                val giteeToken = etGiteeToken.text?.toString()?.trim() ?: ""
+                prefs.edit()
+                    .putString("github_token", githubToken)
+                    .putString("gitee_token", giteeToken)
+                    .apply()
+                Toast.makeText(this, "Token 已保存", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     private fun initViews() {
@@ -190,6 +282,21 @@ class MainActivity : AppCompatActivity() {
         // 打赏按钮
         binding.btnDonate.setOnClickListener {
             startActivity(Intent(this, DonateActivity::class.java))
+        }
+
+        // 同步按钮
+        binding.btnSync.setOnClickListener {
+            syncToCloud()
+        }
+
+        // 查看云端按钮
+        binding.btnViewCloud.setOnClickListener {
+            viewCloudData()
+        }
+
+        // Token 配置按钮
+        binding.btnConfigToken.setOnClickListener {
+            showTokenConfigDialog()
         }
 
         // 标准界面查询按钮 - 切换到查询界面
@@ -541,6 +648,8 @@ class MainActivity : AppCompatActivity() {
     private fun updateUI(statsAndList: Pair<CallStats, List<CallLogItem>>) {
         val stats = statsAndList.first
         val tempList = statsAndList.second
+        // 保存当前统计用于云端同步
+        currentStats = stats
 
         // P5: 使用 submitList + AsyncListDiffer，自动计算 Diff 差异，只刷新变化的 item
         (binding.rvCallLogs.adapter as? CallLogAdapter)?.submitList(tempList)
