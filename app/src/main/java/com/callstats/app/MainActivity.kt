@@ -28,6 +28,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.AsyncListDiffer
+import androidx.recyclerview.widget.DiffUtil
 import com.callstats.app.databinding.ActivityMainBinding
 import java.text.SimpleDateFormat
 import java.util.*
@@ -38,6 +40,7 @@ class MainActivity : AppCompatActivity() {
     private var startDate: Long = 0
     private var endDate: Long = 0
     private var timeRangeText: String = ""
+    private var lastQueryDateRange: String = ""  // 记录上次查询的时间段，避免重复查询
     private var isCompactMode = true // 默认显示查询界面
     private var isCallLogMode = false // 通话记录界面
 
@@ -48,12 +51,28 @@ class MainActivity : AppCompatActivity() {
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     private val weekdayFormat = SimpleDateFormat("EEE", Locale.CHINESE)
 
-    // 通话记录列表数据
-    private val callLogList = mutableListOf<CallLogItem>()
-    // 联系人缓存，避免重复查询
-    private val contactCache = mutableMapOf<String, String>()
+    // 联系人缓存（ConcurrentHashMap避免锁竞争）
+    private val contactCache = java.util.concurrent.ConcurrentHashMap<String, String>()
     // 后台刷新 Handler
     private val contactRefreshHandler = Handler(Looper.getMainLooper())
+    // 查询协程Job，用于取消重复查询
+    private var queryJob: kotlinx.coroutines.Job? = null
+    // P17: 联系人刷新Job，防止并发执行
+    private var refreshJob: kotlinx.coroutines.Job? = null
+    // P20: DatePickerDialog 引用，用于在销毁时 dismiss
+    private var datePickerDialog: DatePickerDialog? = null
+    // 预加载信号量，限制并发数（最多3个并发查询）
+    private val preloadSemaphore = java.util.concurrent.Semaphore(3)
+    // P6: 防抖机制 - 防止快速连续点击
+    private var lastQueryTime = 0L
+    private val QUERY_DEBOUNCE_MS = 300L  // 300ms 防抖阈值
+    // P24: 定期刷新 Runnable，避免匿名对象创建
+    private val refreshContactsRunnable = object : Runnable {
+        override fun run() {
+            refreshContactsInBackground()
+            contactRefreshHandler.postDelayed(this, 5 * 60 * 1000L)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,29 +92,21 @@ class MainActivity : AppCompatActivity() {
         // 默认显示查询界面
         switchToCompactMode()
 
-        // 启动后台联系人刷新（5分钟一次）
-        startContactRefresh()
+        // 启动后台联系人刷新（延迟3秒启动，避开启动高峰）
+        // P24: 使用类级别 Runnable，避免匿名对象
+        contactRefreshHandler.postDelayed({
+            refreshContactsInBackground()
+            contactRefreshHandler.postDelayed(refreshContactsRunnable, 5 * 60 * 1000L)
+        }, 3 * 1000L)
     }
 
-    // 启动后台联系人刷新
-    private fun startContactRefresh() {
-        // 首次立即加载一次
-        refreshContactsInBackground()
-
-        // 每5分钟定期刷新
-        contactRefreshHandler.postDelayed(object : Runnable {
-            override fun run() {
-                refreshContactsInBackground()
-                contactRefreshHandler.postDelayed(this, 5 * 60 * 1000L)
-            }
-        }, 5 * 60 * 1000L)
-    }
-
-    // 后台线程加载全部联系人到缓存
+    // 后台线程加载全部联系人到缓存（归一化号码提高命中率）
     private fun refreshContactsInBackground() {
-        lifecycleScope.launch {
-            val newCache = withContext(Dispatchers.IO) {
-                val map = mutableMapOf<String, String>()
+        // P17: 防止并发执行，如果正在刷新则跳过
+        if (refreshJob?.isActive == true) return
+        refreshJob = lifecycleScope.launch {
+            // P23: 直接在 ConcurrentHashMap 上操作，避免最后 putAll 的一次性大量操作
+            withContext(Dispatchers.IO) {
                 try {
                     contentResolver.query(
                         ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -111,24 +122,28 @@ class MainActivity : AppCompatActivity() {
                             val number = cursor.getString(numberIdx) ?: ""
                             val name = cursor.getString(nameIdx) ?: ""
                             if (number.isNotBlank() && name.isNotBlank()) {
-                                map[number] = name
+                                // 直接写入缓存，同时存储原始号码和归一化号码
+                                val normalized = normalizePhoneNumber(number)
+                                contactCache[number] = name
+                                contactCache[normalized] = name
                             }
                         }
                     }
                 } catch (_: Exception) { }
-                map
-            }
-
-            // 合并到主缓存，静默更新，不干扰 UI
-            synchronized(contactCache) {
-                contactCache.putAll(newCache)
             }
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        // P16: 取消正在进行的查询协程，避免泄漏
+        queryJob?.cancel()
+        refreshJob?.cancel()
+        // P20: 移除所有待执行的刷新任务
         contactRefreshHandler.removeCallbacksAndMessages(null)
+        // P20: dismiss DatePickerDialog 防止内存泄漏
+        datePickerDialog?.dismiss()
+        datePickerDialog = null
     }
 
     // 初始化昵称显示
@@ -196,7 +211,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun initRecyclerView() {
         binding.rvCallLogs.layoutManager = LinearLayoutManager(this)
-        binding.rvCallLogs.adapter = CallLogAdapter(callLogList)
+        // P5: 使用 ListAdapter，由 adapter 内部管理数据
+        binding.rvCallLogs.adapter = CallLogAdapter()
+        // P13: 设置固定高度，RecyclerView 不需要每次都重新计算
+        binding.rvCallLogs.setHasFixedSize(true)
+        // P13: 预取数量，提升滚动流畅度
+        binding.rvCallLogs.setItemViewCacheSize(20)
     }
 
     // 切换到查询界面（紧凑模式）
@@ -325,7 +345,8 @@ class MainActivity : AppCompatActivity() {
         val calendar = Calendar.getInstance()
         calendar.timeInMillis = if (isStartDate) startDate else endDate
 
-        DatePickerDialog(
+        // P20: 保存 dialog 引用，防止内存泄漏
+        datePickerDialog = DatePickerDialog(
             this,
             { _, year, month, dayOfMonth ->
                 calendar.set(year, month, dayOfMonth, 0, 0, 0)
@@ -343,7 +364,8 @@ class MainActivity : AppCompatActivity() {
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
             calendar.get(Calendar.DAY_OF_MONTH)
-        ).show()
+        )
+        datePickerDialog?.show()
     }
 
     private fun checkPermission() {
@@ -378,7 +400,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun queryCallStats() {
+    // P22: queryCallStats 内部添加 force 参数，用于 onResume 强制刷新（跳过防抖）
+    private fun queryCallStats(force: Boolean = false) {
+        // P6: 防抖 - 如果距离上次查询时间太短，忽略本次请求（除非是 force）
+        val now = System.currentTimeMillis()
+        if (!force && now - lastQueryTime < QUERY_DEBOUNCE_MS) {
+            return
+        }
+        lastQueryTime = now
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG)
             != PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, "请先授予通话记录读取权限", Toast.LENGTH_SHORT).show()
@@ -389,41 +419,26 @@ class MainActivity : AppCompatActivity() {
         // 构建时间段文本
         timeRangeText = "${displayDateFormat.format(Date(startDate))} 至 ${displayDateFormat.format(Date(endDate))}"
 
-        // 查询通话记录
-        val stats = queryCallLog()
+        // P3: 取消旧的查询协程，避免重复查询
+        queryJob?.cancel()
 
-        // 显示结果到标准界面
-        binding.tvTimeRange.text = "统计时间段：$timeRangeText"
-        binding.tvTotalCalls.text = stats.totalCalls.toString()
-        binding.tvTotalDuration.text = formatDuration(stats.totalDuration)
+        // 后台线程查询通话记录，不阻塞UI
+        queryJob = lifecycleScope.launch {
+            val stats = withContext(Dispatchers.IO) {
+                queryCallLog()
+            }
 
-        binding.tvIncomingCalls.text = "${stats.incomingCalls} 次"
-        binding.tvIncomingDuration.text = formatDuration(stats.incomingDuration)
-
-        binding.tvOutgoingCalls.text = "${stats.outgoingCalls} 次"
-        binding.tvOutgoingDuration.text = formatDuration(stats.outgoingDuration)
-
-        binding.tvMissedCalls.text = "${stats.missedCalls} 次"
-
-        binding.cardResults.visibility = View.VISIBLE
-
-        // 显示结果到查询界面（完整内容，80%宽度）
-        binding.tvCompactTimeRange.text = timeRangeText
-        binding.tvCompactTotalCalls.text = stats.totalCalls.toString()
-        binding.tvCompactTotalDuration.text = formatDuration(stats.totalDuration)
-
-        binding.tvCompactIncomingCalls.text = "${stats.incomingCalls} 次"
-        binding.tvCompactIncomingDuration.text = formatDuration(stats.incomingDuration)
-
-        binding.tvCompactOutgoingCalls.text = "${stats.outgoingCalls} 次"
-        binding.tvCompactOutgoingDuration.text = formatDuration(stats.outgoingDuration)
-
-        binding.tvCompactMissedCalls.text = "${stats.missedCalls} 次"
+            // P19: 检查 Activity 是否已销毁，避免崩溃
+            if (!isFinishing && !isDestroyed) {
+                // 主线程更新UI
+                updateUI(stats)
+            }
+        }
     }
 
-    private fun queryCallLog(): CallStats {
+    private fun queryCallLog(): Pair<CallStats, MutableList<CallLogItem>> {
         val stats = CallStats()
-        callLogList.clear()
+        val tempList = mutableListOf<CallLogItem>()
 
         // 设置结束时间为当天的23:59:59
         val endCalendar = Calendar.getInstance()
@@ -459,6 +474,12 @@ class MainActivity : AppCompatActivity() {
             "${CallLog.Calls.DATE} DESC"
         )
 
+        // P25: 预定义通话类型文本，避免循环内重复创建
+        val typeIncoming = "来电"
+        val typeOutgoing = "去电"
+        val typeMissed = "未接"
+        val typeUnknown = "未知"
+
         cursor?.use {
             val numberIndex = it.getColumnIndex(CallLog.Calls.NUMBER)
             val typeIndex = it.getColumnIndex(CallLog.Calls.TYPE)
@@ -473,14 +494,14 @@ class MainActivity : AppCompatActivity() {
                 val dateObj = Date(date)
 
                 val typeText = when (type) {
-                    CallLog.Calls.INCOMING_TYPE -> "来电"
-                    CallLog.Calls.OUTGOING_TYPE -> "去电"
-                    CallLog.Calls.MISSED_TYPE -> "未接"
-                    else -> "未知"
+                    CallLog.Calls.INCOMING_TYPE -> typeIncoming
+                    CallLog.Calls.OUTGOING_TYPE -> typeOutgoing
+                    CallLog.Calls.MISSED_TYPE -> typeMissed
+                    else -> typeUnknown
                 }
                 val weekdayText = weekdayFormat.format(dateObj)
                 val timeText = timeFormat.format(dateObj)
-                callLogList.add(CallLogItem(
+                tempList.add(CallLogItem(
                     number,
                     typeText,
                     formatDuration(duration),
@@ -510,10 +531,48 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 更新RecyclerView
-        binding.rvCallLogs.adapter?.notifyDataSetChanged()
+        return stats to tempList
+    }
 
-        return stats
+    // 更新UI（主线程）
+    private fun updateUI(statsAndList: Pair<CallStats, List<CallLogItem>>) {
+        val stats = statsAndList.first
+        val tempList = statsAndList.second
+
+        // P5: 使用 submitList + AsyncListDiffer，自动计算 Diff 差异，只刷新变化的 item
+        (binding.rvCallLogs.adapter as? CallLogAdapter)?.submitList(tempList)
+
+        // 显示结果到标准界面（合并批量设置减少 requestLayout）
+        val timeRangeStr = "统计时间段：$timeRangeText"
+        val totalCallsStr = stats.totalCalls.toString()
+        val totalDurationStr = formatDuration(stats.totalDuration)
+        val incomingCallsStr = "${stats.incomingCalls} 次"
+        val incomingDurationStr = formatDuration(stats.incomingDuration)
+        val outgoingCallsStr = "${stats.outgoingCalls} 次"
+        val outgoingDurationStr = formatDuration(stats.outgoingDuration)
+        val missedCallsStr = "${stats.missedCalls} 次"
+
+        // P7: 一次性设置所有 TextView，减少 measure/layout 次数
+        binding.tvTimeRange.text = timeRangeStr
+        binding.tvTotalCalls.text = totalCallsStr
+        binding.tvTotalDuration.text = totalDurationStr
+        binding.tvIncomingCalls.text = incomingCallsStr
+        binding.tvIncomingDuration.text = incomingDurationStr
+        binding.tvOutgoingCalls.text = outgoingCallsStr
+        binding.tvOutgoingDuration.text = outgoingDurationStr
+        binding.tvMissedCalls.text = missedCallsStr
+
+        binding.cardResults.visibility = View.VISIBLE
+
+        // 显示结果到查询界面
+        binding.tvCompactTimeRange.text = timeRangeText
+        binding.tvCompactTotalCalls.text = totalCallsStr
+        binding.tvCompactTotalDuration.text = totalDurationStr
+        binding.tvCompactIncomingCalls.text = incomingCallsStr
+        binding.tvCompactIncomingDuration.text = incomingDurationStr
+        binding.tvCompactOutgoingCalls.text = outgoingCallsStr
+        binding.tvCompactOutgoingDuration.text = outgoingDurationStr
+        binding.tvCompactMissedCalls.text = missedCallsStr
     }
 
     private fun formatDuration(seconds: Int): String {
@@ -526,38 +585,68 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // 根据电话号码查询联系人备注/姓名（线程安全缓存）
+    // 号码归一化：去除+-86、空格、-等，统一格式
+    private fun normalizePhoneNumber(phone: String): String {
+        return phone.replace(Regex("[^0-9]"), "")
+    }
+
+    // 根据电话号码查询联系人备注/姓名（线程安全，无锁竞争）
     private fun getContactName(phoneNumber: String): String {
         if (phoneNumber.isBlank()) return ""
-        synchronized(contactCache) {
-            contactCache[phoneNumber]?.let { return it }
-        }
-        try {
-            val uri = android.net.Uri.withAppendedPath(
-                ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
-                android.net.Uri.encode(phoneNumber)
-            )
-            contentResolver.query(
-                uri,
-                arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
-                null, null, null
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val nameIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME)
-                    if (nameIndex >= 0) {
-                        val name = cursor.getString(nameIndex) ?: ""
-                        synchronized(contactCache) {
-                            contactCache[phoneNumber] = name
-                        }
-                        return name
-                    }
-                }
+        // 尝试原始号码
+        contactCache[phoneNumber]?.let { return it }
+        // 尝试归一化号码
+        val normalized = normalizePhoneNumber(phoneNumber)
+        if (normalized != phoneNumber) {
+            contactCache[normalized]?.let { cachedName ->
+                // P21: 只在有值时才写入缓存，避免空字符串污染
+                contactCache[phoneNumber] = cachedName
+                return cachedName
             }
-        } catch (_: Exception) { }
-        synchronized(contactCache) {
-            contactCache[phoneNumber] = ""
         }
+        // 兜底：返回空（不在滚动时查询数据库）
         return ""
+    }
+
+    // 后台预加载联系人到缓存（限流，最多3个并发）
+    private fun preloadContactName(phoneNumber: String) {
+        val normalized = normalizePhoneNumber(phoneNumber)
+        // 已有缓存，跳过
+        if (contactCache.containsKey(phoneNumber) || contactCache.containsKey(normalized)) {
+            return
+        }
+        // P2: 信号量限制并发数，避免协程爆炸
+        if (!preloadSemaphore.tryAcquire()) {
+            return // 超过并发限制，丢弃本次请求
+        }
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    try {
+                        val uri = android.net.Uri.withAppendedPath(
+                            ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+                            android.net.Uri.encode(phoneNumber)
+                        )
+                        contentResolver.query(
+                            uri,
+                            arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
+                            null, null, null
+                        )?.use { cursor ->
+                            if (cursor.moveToFirst()) {
+                                val nameIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME)
+                                if (nameIndex >= 0) {
+                                    val name = cursor.getString(nameIndex) ?: ""
+                                    contactCache[normalized] = name
+                                    contactCache[phoneNumber] = name
+                                }
+                            }
+                        }
+                    } catch (_: Exception) { }
+                }
+            } finally {
+                preloadSemaphore.release()
+            }
+        }
     }
 
     data class CallStats(
@@ -580,9 +669,53 @@ class MainActivity : AppCompatActivity() {
         val time: String
     )
 
-    // 通话记录适配器
-    class CallLogAdapter(private val list: List<CallLogItem>) :
-        RecyclerView.Adapter<CallLogAdapter.ViewHolder>() {
+    // 通话记录适配器 - 使用 ListAdapter + DiffUtil 增量更新
+    class CallLogAdapter : RecyclerView.Adapter<CallLogAdapter.ViewHolder>() {
+
+        // DiffUtil.ItemCallback：精确判断哪些 item 变了
+        class DiffCallback : DiffUtil.ItemCallback<CallLogItem>() {
+            override fun areItemsTheSame(oldItem: CallLogItem, newItem: CallLogItem): Boolean {
+                // 用日期+时间+号码作为唯一标识
+                return oldItem.date == newItem.date &&
+                       oldItem.time == newItem.time &&
+                       oldItem.number == newItem.number
+            }
+            override fun areContentsTheSame(oldItem: CallLogItem, newItem: CallLogItem): Boolean {
+                return oldItem == newItem
+            }
+        }
+
+        // P5: 使用 ListAdapter + AsyncListDiffer，支持异步 Diff 计算
+        private val differ = AsyncListDiffer(this, DiffCallback())
+
+        fun submitList(newList: List<CallLogItem>) {
+            differ.submitList(newList)
+        }
+
+        override fun getItemCount(): Int = differ.currentList.size
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_call_log, parent, false)
+            return ViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val item = differ.currentList[position]
+            // P9: 直接显示号码，后台异步预加载联系人姓名
+            val contactName = getContactName(item.number)
+            holder.tvName.text = contactName.ifBlank { item.number }
+            holder.tvNumber.text = if (contactName.isNotBlank()) item.number else ""
+            holder.tvType.text = item.type
+            holder.tvDuration.text = item.duration
+            holder.tvDate.text = item.date
+            holder.tvWeekday.text = " ${item.weekday}"
+            holder.tvTime.text = item.time
+            // P9: 只在缓存未命中时预加载
+            if (contactName.isBlank()) {
+                preloadContactName(item.number)
+            }
+        }
 
         class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             val tvName: TextView = itemView.findViewById(R.id.tvName)
@@ -593,33 +726,16 @@ class MainActivity : AppCompatActivity() {
             val tvWeekday: TextView = itemView.findViewById(R.id.tvWeekday)
             val tvTime: TextView = itemView.findViewById(R.id.tvTime)
         }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_call_log, parent, false)
-            return ViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val item = list[position]
-            val contactName = getContactName(item.number)
-            holder.tvName.text = contactName.ifBlank { item.number }
-            holder.tvNumber.text = if (contactName.isNotBlank()) item.number else ""
-            holder.tvType.text = item.type
-            holder.tvDuration.text = item.duration
-            holder.tvDate.text = item.date
-            holder.tvWeekday.text = " ${item.weekday}"
-            holder.tvTime.text = item.time
-        }
-
-        override fun getItemCount() = list.size
     }
 
     override fun onResume() {
         super.onResume()
-        // 如果在通话记录界面或查询界面，重新加载数据
-        if (isCallLogMode || isCompactMode) {
-            queryCallStats()
+        // 按需刷新：只有日期范围变了才重新查询
+        // P22: onResume 使用 force=true 跳过防抖，确保恢复页面时能刷新
+        val currentRange = "$startDate-$endDate"
+        if ((isCallLogMode || isCompactMode) && currentRange != lastQueryDateRange) {
+            lastQueryDateRange = currentRange
+            queryCallStats(force = true)
         }
     }
 

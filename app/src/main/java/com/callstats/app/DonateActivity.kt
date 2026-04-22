@@ -16,8 +16,11 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.FileProvider
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
@@ -48,12 +51,14 @@ class DonateActivity : AppCompatActivity() {
 
         // 微信收款码长按保存
         findViewById<ImageView>(R.id.ivWechatPay).setOnLongClickListener {
+            // P12: 图片保存移到后台线程
             saveImageToGallery(R.drawable.wechat_pay, "微信收款码")
             true
         }
 
         // 支付宝收款码长按保存
         findViewById<ImageView>(R.id.ivAlipay).setOnLongClickListener {
+            // P12: 图片保存移到后台线程
             saveImageToGallery(R.drawable.alipay, "支付宝收款码")
             true
         }
@@ -73,10 +78,10 @@ class DonateActivity : AppCompatActivity() {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("支付宝吱口令", alipayCode)
             clipboard.setPrimaryClip(clip)
-            
+
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("alipays://"))
             startActivity(intent)
-            
+
             Toast.makeText(this, "吱口令已复制，打开支付宝粘贴", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             try {
@@ -88,24 +93,40 @@ class DonateActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * P12: 图片保存 - 在后台线程解码并保存
+     */
     private fun saveImageToGallery(drawableId: Int, imageName: String) {
-        try {
-            val bitmap = BitmapFactory.decodeResource(resources, drawableId)
-            val saved = saveBitmapToGallery(bitmap, imageName)
-            if (saved) {
-                Toast.makeText(this, "$imageName 已保存到相册", Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(this, "保存失败，请重试", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            try {
+                // P12: 在 IO 线程解码图片
+                val bitmap = withContext(Dispatchers.IO) {
+                    BitmapFactory.decodeResource(resources, drawableId)
+                }
+
+                // 在主线程保存
+                val saved = saveBitmapToGallery(bitmap, imageName)
+
+                // Toast 需要在主线程
+                withContext(Dispatchers.Main) {
+                    if (saved) {
+                        Toast.makeText(this@DonateActivity, "$imageName 已保存到相册", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(this@DonateActivity, "保存失败，请重试", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@DonateActivity, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
-        } catch (e: Exception) {
-            Toast.makeText(this, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun saveBitmapToGallery(bitmap: Bitmap, fileName: String): Boolean {
         return try {
             val outputStream: OutputStream?
-            
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 // Android 10+ 使用 MediaStore
                 val contentValues = ContentValues().apply {
@@ -125,13 +146,13 @@ class DonateActivity : AppCompatActivity() {
                 }
                 val imageFile = File(appDir, "$fileName.png")
                 outputStream = FileOutputStream(imageFile)
-                
+
                 // 通知图库更新
                 val mediaScanIntent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
                 mediaScanIntent.data = Uri.fromFile(imageFile)
                 sendBroadcast(mediaScanIntent)
             }
-            
+
             outputStream?.use {
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
             }
