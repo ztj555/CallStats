@@ -114,14 +114,9 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (_: Exception) { }
 
-            // 合并到主缓存（新值覆盖旧值，但保留主缓存已有的非新联系人的条目）
+            // 合并到主缓存，静默更新，不干扰 UI
             synchronized(contactCache) {
                 contactCache.putAll(newCache)
-            }
-
-            // 如果当前列表有数据，用新缓存刷新显示
-            if (callLogList.isNotEmpty()) {
-                binding.rvCallLogs.adapter?.notifyDataSetChanged()
             }
         }
     }
