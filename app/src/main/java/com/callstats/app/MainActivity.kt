@@ -467,7 +467,6 @@ class MainActivity : AppCompatActivity() {
                 val date = it.getLong(dateIndex)
                 val dateObj = Date(date)
 
-                val contactName = getContactName(number)
                 val typeText = when (type) {
                     CallLog.Calls.INCOMING_TYPE -> "来电"
                     CallLog.Calls.OUTGOING_TYPE -> "去电"
@@ -477,7 +476,6 @@ class MainActivity : AppCompatActivity() {
                 val weekdayText = weekdayFormat.format(dateObj)
                 val timeText = timeFormat.format(dateObj)
                 callLogList.add(CallLogItem(
-                    contactName,
                     number,
                     typeText,
                     formatDuration(duration),
@@ -569,7 +567,6 @@ class MainActivity : AppCompatActivity() {
 
     // 通话记录数据类
     data class CallLogItem(
-        val name: String,
         val number: String,
         val type: String,
         val duration: String,
@@ -600,8 +597,9 @@ class MainActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val item = list[position]
-            holder.tvName.text = item.name.ifBlank { item.number }
-            holder.tvNumber.text = if (item.name.isNotBlank()) item.number else ""
+            val contactName = getContactName(item.number)
+            holder.tvName.text = contactName.ifBlank { item.number }
+            holder.tvNumber.text = if (contactName.isNotBlank()) item.number else ""
             holder.tvType.text = item.type
             holder.tvDuration.text = item.duration
             holder.tvDate.text = item.date
