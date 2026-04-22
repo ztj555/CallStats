@@ -45,6 +45,8 @@ class MainActivity : AppCompatActivity() {
 
     // 通话记录列表数据
     private val callLogList = mutableListOf<CallLogItem>()
+    // 联系人缓存，避免重复查询
+    private val contactCache = mutableMapOf<String, String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -358,6 +360,7 @@ class MainActivity : AppCompatActivity() {
     private fun queryCallLog(): CallStats {
         val stats = CallStats()
         callLogList.clear()
+        contactCache.clear()
 
         // 设置结束时间为当天的23:59:59
         val endCalendar = Calendar.getInstance()
@@ -462,9 +465,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // 根据电话号码查询联系人备注/姓名
+    // 根据电话号码查询联系人备注/姓名（带缓存）
     private fun getContactName(phoneNumber: String): String {
         if (phoneNumber.isBlank()) return ""
+        contactCache[phoneNumber]?.let { return it }
         try {
             val uri = android.net.Uri.withAppendedPath(
                 ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
@@ -478,11 +482,14 @@ class MainActivity : AppCompatActivity() {
                 if (cursor.moveToFirst()) {
                     val nameIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME)
                     if (nameIndex >= 0) {
-                        return cursor.getString(nameIndex) ?: ""
+                        val name = cursor.getString(nameIndex) ?: ""
+                        contactCache[phoneNumber] = name
+                        return name
                     }
                 }
             }
         } catch (_: Exception) { }
+        contactCache[phoneNumber] = ""
         return ""
     }
 
