@@ -20,7 +20,8 @@ import java.util.*
  */
 class CloudSyncManager(private val context: Context) {
 
-    private val prefs: SharedPreferences = context.getSharedPreferences("cloud_sync_prefs", Context.MODE_PRIVATE)
+    // 使用与 MainActivity 相同的 SharedPreferences，确保 Token 配置可以共享
+    private val prefs: SharedPreferences = context.getSharedPreferences("callstats_prefs", Context.MODE_PRIVATE)
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val monthFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
 
