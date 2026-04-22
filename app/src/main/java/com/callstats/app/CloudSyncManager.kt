@@ -82,7 +82,7 @@ class CloudSyncManager(private val context: Context) {
      * @param callback 回调
      */
     suspend fun syncStats(
-        stats: CallStats,
+        stats: MainActivity.CallStats,
         callback: (SyncResult) -> Unit
     ) {
         withContext(Dispatchers.IO) {
