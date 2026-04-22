@@ -23,7 +23,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.callstats.app.databinding.ActivityMainBinding
@@ -92,27 +94,30 @@ class MainActivity : AppCompatActivity() {
     // 后台线程加载全部联系人到缓存
     private fun refreshContactsInBackground() {
         lifecycleScope.launch {
-            val newCache = mutableMapOf<String, String>()
-            try {
-                contentResolver.query(
-                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                    arrayOf(
-                        ContactsContract.CommonDataKinds.Phone.NUMBER,
-                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
-                    ),
-                    null, null, null
-                )?.use { cursor ->
-                    val numberIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-                    val nameIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
-                    while (cursor.moveToNext()) {
-                        val number = cursor.getString(numberIdx) ?: ""
-                        val name = cursor.getString(nameIdx) ?: ""
-                        if (number.isNotBlank() && name.isNotBlank()) {
-                            newCache[number] = name
+            val newCache = withContext(Dispatchers.IO) {
+                val map = mutableMapOf<String, String>()
+                try {
+                    contentResolver.query(
+                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                        arrayOf(
+                            ContactsContract.CommonDataKinds.Phone.NUMBER,
+                            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
+                        ),
+                        null, null, null
+                    )?.use { cursor ->
+                        val numberIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                        val nameIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                        while (cursor.moveToNext()) {
+                            val number = cursor.getString(numberIdx) ?: ""
+                            val name = cursor.getString(nameIdx) ?: ""
+                            if (number.isNotBlank() && name.isNotBlank()) {
+                                map[number] = name
+                            }
                         }
                     }
-                }
-            } catch (_: Exception) { }
+                } catch (_: Exception) { }
+                map
+            }
 
             // 合并到主缓存，静默更新，不干扰 UI
             synchronized(contactCache) {
