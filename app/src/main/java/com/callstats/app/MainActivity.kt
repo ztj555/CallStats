@@ -68,39 +68,12 @@ class MainActivity : AppCompatActivity() {
     // 初始化昵称显示
     private fun initNickname() {
         val savedNickname = prefs.getString("user_nickname", "") ?: ""
-        if (savedNickname.isNotEmpty()) {
-            binding.tvNickname.text = savedNickname
-            binding.tvNickname.visibility = View.VISIBLE
-            binding.etNickname.visibility = View.GONE
-        } else {
-            binding.tvNickname.visibility = View.GONE
-            binding.etNickname.visibility = View.VISIBLE
-            // 不覆盖 XML 中设置的 hint
-        }
+        // 始终用 etNickname 展示，有昵称就回填，没有就显示 hint
+        binding.etNickname.setText(savedNickname)
+        binding.tvNickname.visibility = View.GONE
+        binding.etNickname.visibility = View.VISIBLE
 
-        // 昵称输入框容器 - 点击切换到编辑模式（解决禁用状态无法点击的问题）
-        binding.tilNickname.setOnClickListener {
-            if (binding.etNickname.visibility != View.VISIBLE || binding.etNickname.isEnabled != true) {
-                binding.tvNickname.visibility = View.GONE
-                binding.etNickname.visibility = View.VISIBLE
-                enableNicknameInput()
-                binding.etNickname.requestFocus()
-                binding.etNickname.setSelection(binding.etNickname.text?.length ?: 0)
-                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.showSoftInput(binding.etNickname, InputMethodManager.SHOW_IMPLICIT)
-            }
-        }
-
-        // 昵称输入框 - 点击切换到编辑模式
-        binding.etNickname.setOnClickListener {
-            enableNicknameInput()
-            binding.etNickname.requestFocus()
-            binding.etNickname.setSelection(binding.etNickname.text?.length ?: 0)
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.showSoftInput(binding.etNickname, InputMethodManager.SHOW_IMPLICIT)
-        }
-
-        // 昵称输入完成
+        // 昵称输入完成（按回车/完成键）
         binding.etNickname.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
                 saveNickname()
@@ -110,18 +83,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 昵称文本点击 - 进入编辑模式
-        binding.tvNickname.setOnClickListener {
-            binding.tvNickname.visibility = View.GONE
-            binding.etNickname.visibility = View.VISIBLE
-            enableNicknameInput()
-            binding.etNickname.requestFocus()
-            binding.etNickname.setSelection(binding.etNickname.text?.length ?: 0)
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.showSoftInput(binding.etNickname, InputMethodManager.SHOW_IMPLICIT)
-        }
-
-        // 输入框失去焦点时保存
+        // 输入框失去焦点时自动保存
         binding.etNickname.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
                 saveNickname()
@@ -133,12 +95,6 @@ class MainActivity : AppCompatActivity() {
     private fun saveNickname() {
         val nickname = binding.etNickname.text?.toString()?.trim() ?: ""
         prefs.edit().putString("user_nickname", nickname).apply()
-
-        if (nickname.isNotEmpty()) {
-            binding.tvNickname.text = nickname
-            binding.tvNickname.visibility = View.VISIBLE
-        }
-
         // 隐藏键盘
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(binding.etNickname.windowToken, 0)
@@ -210,22 +166,13 @@ class MainActivity : AppCompatActivity() {
         binding.fabQuery.visibility = View.GONE
         binding.cardCompactResults.visibility = View.GONE
         binding.rvCallLogs.visibility = View.GONE
-        binding.rvCallLogs.alpha = 1.0f // 恢复正常透明度
-        binding.layoutFooter.visibility = View.VISIBLE // 显示底部信息
+        binding.rvCallLogs.alpha = 1.0f
+        binding.layoutFooter.visibility = View.VISIBLE
 
-        // 处理昵称显示逻辑
+        // 回填已保存的昵称并启用输入
         val savedNickname = prefs.getString("user_nickname", "") ?: ""
-        if (savedNickname.isNotEmpty()) {
-            binding.tvNickname.text = savedNickname
-            binding.tvNickname.visibility = View.VISIBLE
-            binding.etNickname.visibility = View.GONE
-            disableNicknameInput()
-        } else {
-            binding.tvNickname.visibility = View.GONE
-            binding.etNickname.visibility = View.VISIBLE
-            binding.etNickname.setText("") // 清空残留内容
-            enableNicknameInput()
-        }
+        binding.etNickname.setText(savedNickname)
+        enableNicknameInput()
     }
 
     // 切换到通话记录界面（只显示通话记录，无统计板块）
@@ -240,18 +187,19 @@ class MainActivity : AppCompatActivity() {
         disableNicknameInput() // 禁用昵称输入
     }
 
-    // 禁用昵称输入
+    // 禁用昵称输入（非标准界面，不可编辑但视觉不变灰）
     private fun disableNicknameInput() {
-        binding.etNickname.isEnabled = false
         binding.etNickname.isFocusable = false
+        binding.etNickname.isFocusableInTouchMode = false
         binding.etNickname.isClickable = false
     }
 
-    // 启用昵称输入
+    // 启用昵称输入（标准界面，可正常编辑）
     private fun enableNicknameInput() {
-        binding.etNickname.isEnabled = true
         binding.etNickname.isFocusable = true
+        binding.etNickname.isFocusableInTouchMode = true
         binding.etNickname.isClickable = true
+        binding.etNickname.isEnabled = true
     }
 
     // 当天：今天到今天
