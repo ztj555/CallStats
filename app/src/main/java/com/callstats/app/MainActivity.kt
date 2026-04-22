@@ -8,6 +8,8 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.CallLog
 import android.provider.ContactsContract
 import android.view.LayoutInflater
@@ -20,7 +22,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.callstats.app.databinding.ActivityMainBinding
@@ -47,6 +50,8 @@ class MainActivity : AppCompatActivity() {
     private val callLogList = mutableListOf<CallLogItem>()
     // 联系人缓存，避免重复查询
     private val contactCache = mutableMapOf<String, String>()
+    // 后台刷新 Handler
+    private val contactRefreshHandler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,6 +70,65 @@ class MainActivity : AppCompatActivity() {
 
         // 默认显示查询界面
         switchToCompactMode()
+
+        // 启动后台联系人刷新（5分钟一次）
+        startContactRefresh()
+    }
+
+    // 启动后台联系人刷新
+    private fun startContactRefresh() {
+        // 首次立即加载一次
+        refreshContactsInBackground()
+
+        // 每5分钟定期刷新
+        contactRefreshHandler.postDelayed(object : Runnable {
+            override fun run() {
+                refreshContactsInBackground()
+                contactRefreshHandler.postDelayed(this, 5 * 60 * 1000L)
+            }
+        }, 5 * 60 * 1000L)
+    }
+
+    // 后台线程加载全部联系人到缓存
+    private fun refreshContactsInBackground() {
+        lifecycleScope.launch {
+            val newCache = mutableMapOf<String, String>()
+            try {
+                contentResolver.query(
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    arrayOf(
+                        ContactsContract.CommonDataKinds.Phone.NUMBER,
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
+                    ),
+                    null, null, null
+                )?.use { cursor ->
+                    val numberIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                    val nameIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                    while (cursor.moveToNext()) {
+                        val number = cursor.getString(numberIdx) ?: ""
+                        val name = cursor.getString(nameIdx) ?: ""
+                        if (number.isNotBlank() && name.isNotBlank()) {
+                            newCache[number] = name
+                        }
+                    }
+                }
+            } catch (_: Exception) { }
+
+            // 合并到主缓存（新值覆盖旧值，但保留主缓存已有的非新联系人的条目）
+            synchronized(contactCache) {
+                contactCache.putAll(newCache)
+            }
+
+            // 如果当前列表有数据，用新缓存刷新显示
+            if (callLogList.isNotEmpty()) {
+                binding.rvCallLogs.adapter?.notifyDataSetChanged()
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        contactRefreshHandler.removeCallbacksAndMessages(null)
     }
 
     // 初始化昵称显示
@@ -360,7 +424,6 @@ class MainActivity : AppCompatActivity() {
     private fun queryCallLog(): CallStats {
         val stats = CallStats()
         callLogList.clear()
-        contactCache.clear()
 
         // 设置结束时间为当天的23:59:59
         val endCalendar = Calendar.getInstance()
@@ -465,10 +528,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // 根据电话号码查询联系人备注/姓名（带缓存）
+    // 根据电话号码查询联系人备注/姓名（线程安全缓存）
     private fun getContactName(phoneNumber: String): String {
         if (phoneNumber.isBlank()) return ""
-        contactCache[phoneNumber]?.let { return it }
+        synchronized(contactCache) {
+            contactCache[phoneNumber]?.let { return it }
+        }
         try {
             val uri = android.net.Uri.withAppendedPath(
                 ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
@@ -483,13 +548,17 @@ class MainActivity : AppCompatActivity() {
                     val nameIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME)
                     if (nameIndex >= 0) {
                         val name = cursor.getString(nameIndex) ?: ""
-                        contactCache[phoneNumber] = name
+                        synchronized(contactCache) {
+                            contactCache[phoneNumber] = name
+                        }
                         return name
                     }
                 }
             }
         } catch (_: Exception) { }
-        contactCache[phoneNumber] = ""
+        synchronized(contactCache) {
+            contactCache[phoneNumber] = ""
+        }
         return ""
     }
 
